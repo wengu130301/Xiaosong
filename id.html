@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>LaswI ID</title>
+  <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+
+<!-- 页面容器 -->
+<div class="page" id="page">
+
+  <!-- 顶部栏 -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="header-back-btn" id="backBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+      </div>
+      <div class="header-title">LaswI ID</div>
+      <div class="header-right"></div>
+    </div>
+  </header>
+
+  <!-- 内容区 -->
+  <main class="content" id="idContent">
+    <div class="content-inner">
+
+      <!-- 未登录视图 -->
+      <div id="authView" style="display:none;">
+        <!-- Logo -->
+        <div class="id-logo-section">
+          <img class="id-logo" src="assets/logo.png" alt="LaswI">
+          <div class="id-brand-name">LaswI ID</div>
+          <div class="id-brand-desc">登录后体验完整功能</div>
+        </div>
+
+        <!-- 模式提示 -->
+        <div class="id-mode-notice" id="modeNotice" style="display:none;">
+          体验模式：云端功能不可用，账号信息仅保存在本地
+        </div>
+
+        <!-- Tab 切换 -->
+        <div class="auth-tab-bar">
+          <button class="auth-tab active" data-tab="login">登录</button>
+          <button class="auth-tab" data-tab="register">注册</button>
+        </div>
+
+        <!-- 登录表单 -->
+        <div class="auth-form-wrap" id="loginForm">
+          <div class="form-item">
+            <label class="form-label">邮箱</label>
+            <input type="email" class="form-input" id="loginEmail" placeholder="请输入邮箱" autocomplete="email">
+          </div>
+          <div class="form-item">
+            <label class="form-label">密码</label>
+            <input type="password" class="form-input" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+          </div>
+          <button class="auth-submit-btn" id="loginSubmit">登录</button>
+          <div class="auth-error" id="loginError"></div>
+        </div>
+
+        <!-- 注册表单 -->
+        <div class="auth-form-wrap" id="registerForm" style="display:none;">
+          <div class="form-item">
+            <label class="form-label">用户名</label>
+            <input type="text" class="form-input" id="regUsername" placeholder="2-12个字符" maxlength="12" autocomplete="name">
+          </div>
+          <div class="form-item">
+            <label class="form-label">邮箱</label>
+            <input type="email" class="form-input" id="regEmail" placeholder="用于登录和找回密码" autocomplete="email">
+          </div>
+          <div class="form-item">
+            <label class="form-label">密码</label>
+            <input type="password" class="form-input" id="regPassword" placeholder="至少6位" autocomplete="new-password">
+          </div>
+          <div class="form-item">
+            <label class="form-label">确认密码</label>
+            <input type="password" class="form-input" id="regPassword2" placeholder="再次输入密码" autocomplete="new-password">
+          </div>
+          <div class="auth-agree-row">
+            <label class="auth-checkbox-label">
+              <input type="checkbox" id="agreeCheck">
+              <span>我已阅读并同意<a href="#" id="agreeLink">用户协议</a>与<a href="#" id="privacyLink">隐私政策</a></span>
+            </label>
+          </div>
+          <button class="auth-submit-btn" id="regSubmit">注册</button>
+          <div class="auth-error" id="regError"></div>
+        </div>
+
+        <!-- 本地注册入口 -->
+        <div class="auth-divider" id="localDivider">
+          <span class="auth-divider-text">或</span>
+        </div>
+        <button class="auth-local-btn" id="localRegBtn">免登录快速体验</button>
+      </div>
+
+      <!-- 已登录视图 -->
+      <div id="profileView" style="display:none;">
+        <!-- 用户信息卡片 -->
+        <div class="id-user-card">
+          <div class="id-user-avatar" id="userAvatar"></div>
+          <div class="id-user-info">
+            <div class="id-user-name" id="userName"></div>
+            <div class="id-user-email" id="userEmail"></div>
+          </div>
+        </div>
+
+        <!-- LaswI ID 卡片 -->
+        <div class="id-detail-card">
+          <div class="id-detail-row">
+            <span class="id-detail-label">LaswI ID</span>
+            <span class="id-detail-value" id="userLaswiId"></span>
+            <button class="id-copy-btn" id="copyIdBtn">复制</button>
+          </div>
+          <div class="id-detail-row">
+            <span class="id-detail-label">会员状态</span>
+            <span class="id-detail-value" id="userVipStatus">普通用户</span>
+          </div>
+          <div class="id-detail-row">
+            <span class="id-detail-label">注册时间</span>
+            <span class="id-detail-value" id="userRegTime"></span>
+          </div>
+          <div class="id-detail-row" id="userSourceRow">
+            <span class="id-detail-label">账号类型</span>
+            <span class="id-detail-value" id="userSource"></span>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <button class="id-action-btn id-logout-btn" id="logoutBtn">退出登录</button>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- 用户协议弹窗（复用 profile.html 的样式结构） -->
+<div class="legal-overlay" id="agreementOverlay">
+  <div class="legal-card">
+    <div class="legal-header">
+      <div class="legal-title">用户协议</div>
+      <button class="legal-close" id="agreementCloseBtn">&times;</button>
+    </div>
+    <div class="legal-body">
+      <p class="legal-updated">最后更新日期：2026年8月24日</p>
+      <h3>一、总则</h3>
+      <p>1. 本协议是您与 LaswI（以下简称"我们"或"平台"）之间就使用"我是晓松"应用及相关服务所订立的协议。请您在使用本应用前仔细阅读本协议全部内容。</p>
+      <p>2. 您点击"开始使用"或使用本应用即视为您已阅读并同意本协议的全部条款。如您不同意本协议的任何内容，请勿使用本应用。</p>
+      <p>3. 我们有权根据法律法规变化、产品服务升级等需要不时修订本协议，修订后的协议将自发布之日起生效。如您继续使用本应用，即视为您接受修订后的协议。</p>
+      <h3>二、账号与 LaswI ID</h3>
+      <p>1. 您可以通过注册 LaswI ID 账号使用本应用的完整功能。注册时您应提供真实、准确、完整的个人信息。</p>
+      <p>2. 您的 LaswI ID 账号和密码由您自行保管，因您保管不善导致的损失由您自行承担。如发现账号被盗用或存在安全风险，请立即联系我们。</p>
+      <p>3. 您不得将 LaswI ID 账号转让、出售或出借给他人使用。我们有权对违规账号进行限制或注销处理。</p>
+      <p>4. 您注册账号时应年满 16 周岁。如您未满 16 周岁，应在监护人陪同下阅读本协议并取得监护人同意后使用。</p>
+      <h3>三、服务内容</h3>
+      <p>1. 本应用提供以下服务：AI 对话、智能体创建与管理、天气预报、地图导航、科学计算器、AI 备忘录、时钟、浏览器搜索等功能。</p>
+      <p>2. AI 对话功能由第三方大语言模型（智谱 GLM-4）提供支持。AI 生成的内容仅供参考，不构成专业建议。</p>
+      <p>3. AI 生图功能由第三方服务（智谱 CogView）提供。生成的图片可能存在偏差，您应自行承担使用生成图片的风险。</p>
+      <h3>四、用户行为规范</h3>
+      <p>1. 遵守中华人民共和国相关法律法规，不利用本应用从事违法违规活动。</p>
+      <p>2. 不发送或传播暴力、恐怖、色情、赌博、毒品、诈骗、谣言等内容。</p>
+      <p>3. 不侵犯他人知识产权、肖像权、隐私权等合法权益。</p>
+      <p>4. 不对应用进行逆向工程、反编译、破解等操作。</p>
+      <h3>五、免责声明</h3>
+      <p>1. AI 生成的内容可能存在错误，不对其完整性、准确性和可靠性做出任何保证。</p>
+      <p>2. 因网络故障、设备问题、第三方服务中断等原因导致服务不可用，我们不承担责任。</p>
+      <h3>六、争议解决</h3>
+      <p>1. 本协议的签订、履行、解释及争议解决均适用中华人民共和国法律。</p>
+      <p>2. 因本协议产生的争议，双方应首先协商解决；协商不成的，任何一方均可向我们所在地有管辖权的人民法院提起诉讼。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 隐私政策弹窗 -->
+<div class="legal-overlay" id="privacyOverlay">
+  <div class="legal-card">
+    <div class="legal-header">
+      <div class="legal-title">隐私政策</div>
+      <button class="legal-close" id="privacyCloseBtn">&times;</button>
+    </div>
+    <div class="legal-body">
+      <p class="legal-updated">最后更新日期：2026年8月24日</p>
+      <p>我们深知个人信息对您的重要性，将以最大诚意和审慎态度保护您的隐私。</p>
+      <h3>一、我们收集的信息</h3>
+      <p><strong>1. 您主动提供的信息</strong>：注册时的用户名、邮箱；创建智能体时的配置；对话中输入的内容。</p>
+      <p><strong>2. 自动收集的信息</strong>：设备信息、使用日志、位置信息（仅在使用天气和地图功能时）。</p>
+      <p><strong>3. 第三方服务</strong>：智谱 AI（对话和生图）、高德地图（天气和地图）、Supabase（数据存储）。</p>
+      <h3>二、信息使用</h3>
+      <p>1. 提供核心服务功能。2. 改善服务质量。3. 个性化体验。4. 账号安全。5. 法律合规。</p>
+      <h3>三、信息存储与保护</h3>
+      <p>本地存储：对话历史、备忘录等存储在设备本地。云端存储：注册信息存储在 Supabase。数据传输采用 HTTPS 加密。</p>
+      <h3>四、信息共享</h3>
+      <p>我们不会出售您的个人信息。仅在获得同意、提供功能需要或法律要求时共享。</p>
+      <h3>五、您的权利</h3>
+      <p>访问与更正、删除、撤回授权、账号注销、数据导出。</p>
+      <h3>六、第三方 SDK</h3>
+      <p>1. 智谱 AI SDK - AI 对话和生图 - https://open.bigmodel.cn</p>
+      <p>2. 高德地图 SDK - 天气和地图 - https://lbs.amap.com</p>
+      <p>3. Supabase - 用户认证和数据存储 - https://supabase.com</p>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 脚本 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/api.js"></script>
+<script src="js/common.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  /* ---- DOM ---- */
+  var backBtn = document.getElementById('backBtn');
+  var authView = document.getElementById('authView');
+  var profileView = document.getElementById('profileView');
+  var modeNotice = document.getElementById('modeNotice');
+  var loginForm = document.getElementById('loginForm');
+  var registerForm = document.getElementById('registerForm');
+  var loginSubmit = document.getElementById('loginSubmit');
+  var regSubmit = document.getElementById('regSubmit');
+  var localRegBtn = document.getElementById('localRegBtn');
+  var localDivider = document.getElementById('localDivider');
+  var loginError = document.getElementById('loginError');
+  var regError = document.getElementById('regError');
+  var logoutBtn = document.getElementById('logoutBtn');
+  var toast = document.getElementById('toast');
+  var copyIdBtn = document.getElementById('copyIdBtn');
+
+  var isSupabaseReady = false;
+
+  /* ---- 初始化 ---- */
+  function init() {
+    // 初始化 Supabase（SDK 已在 api.js 之前加载）
+    try {
+      SupabaseAPI.init();
+      isSupabaseReady = SupabaseAPI.isReady();
+    } catch (e) {
+      console.warn('[id.html] Supabase init failed:', e.message);
+      isSupabaseReady = false;
+    }
+
+    if (!isSupabaseReady) {
+      modeNotice.style.display = 'block';
+      localDivider.style.display = 'flex';
+      localRegBtn.style.display = 'block';
+    }
+
+    // 无论 Supabase 是否就绪，都要显示界面和绑定事件
+    if (Storage.isLoggedIn()) {
+      showProfileView();
+    } else {
+      authView.style.display = 'block';
+    }
+
+    bindEvents();
+  }
+
+  /* ---- 视图切换 ---- */
+  function showProfileView() {
+    authView.style.display = 'none';
+    profileView.style.display = 'block';
+    renderProfile();
+  }
+
+  function showAuthView() {
+    profileView.style.display = 'none';
+    authView.style.display = 'block';
+  }
+
+  function renderProfile() {
+    var user = Storage.getUser();
+    if (!user) return;
+
+    var initial = (user.username || '我').charAt(0).toUpperCase();
+    document.getElementById('userAvatar').textContent = initial;
+    document.getElementById('userName').textContent = user.username || '用户';
+    document.getElementById('userEmail').textContent = user.email || '未绑定邮箱';
+    document.getElementById('userLaswiId').textContent = user.id || '未知';
+    document.getElementById('userVipStatus').textContent = user.isVIP ? 'VIP 会员' : '普通用户';
+    document.getElementById('userRegTime').textContent = user.created_at ? formatDate(user.created_at) : '未知';
+    document.getElementById('userSource').textContent = user.source === 'supabase' ? '云端账号' : '本地账号';
+  }
+
+  function formatDate(iso) {
+    var d = new Date(iso);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  /* ---- Tab 切换 ---- */
+  var tabBtns = document.querySelectorAll('.auth-tab');
+  for (var i = 0; i < tabBtns.length; i++) {
+    tabBtns[i].addEventListener('click', function() {
+      var tab = this.getAttribute('data-tab');
+      for (var j = 0; j < tabBtns.length; j++) {
+        tabBtns[j].classList.remove('active');
+      }
+      this.classList.add('active');
+      if (tab === 'login') {
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+      } else {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'block';
+      }
+      loginError.textContent = '';
+      regError.textContent = '';
+    });
+  }
+
+  /* ---- 登录 ---- */
+  function handleLogin() {
+    var email = document.getElementById('loginEmail').value.trim();
+    var password = document.getElementById('loginPassword').value;
+
+    loginError.textContent = '';
+
+    if (!email || !password) {
+      loginError.textContent = '请填写邮箱和密码';
+      return;
+    }
+
+    loginSubmit.disabled = true;
+    loginSubmit.textContent = '登录中...';
+
+    if (isSupabaseReady) {
+      // Supabase 登录
+      SupabaseAPI.signIn(email, password).then(function(data) {
+        var user = data.user;
+        var username = (user.user_metadata && user.user_metadata.username) || email.split('@')[0];
+        var userData = {
+          id: user.id,
+          username: username,
+          email: user.email,
+          isVIP: false,
+          source: 'supabase',
+          created_at: user.created_at,
+        };
+        Storage.setUser(userData);
+        showToast('登录成功');
+        setTimeout(function() {
+          showProfileView();
+        }, 800);
+      }).catch(function(err) {
+        loginError.textContent = err.message || '登录失败，请检查邮箱和密码';
+      }).finally(function() {
+        loginSubmit.disabled = false;
+        loginSubmit.textContent = '登录';
+      });
+    } else {
+      // 本地登录（查找已注册的本地用户）
+      var localUsers = Storage.get('local_users', []);
+      var found = null;
+      for (var i = 0; i < localUsers.length; i++) {
+        if (localUsers[i].email === email && localUsers[i].password === password) {
+          found = localUsers[i];
+          break;
+        }
+      }
+      if (found) {
+        Storage.setUser(found);
+        showToast('登录成功');
+        setTimeout(function() {
+          showProfileView();
+        }, 800);
+      } else {
+        loginError.textContent = '账号不存在或密码错误';
+      }
+      loginSubmit.disabled = false;
+      loginSubmit.textContent = '登录';
+    }
+  }
+
+  /* ---- 注册 ---- */
+  function handleRegister() {
+    var username = document.getElementById('regUsername').value.trim();
+    var email = document.getElementById('regEmail').value.trim();
+    var password = document.getElementById('regPassword').value;
+    var password2 = document.getElementById('regPassword2').value;
+    var agreed = document.getElementById('agreeCheck').checked;
+
+    regError.textContent = '';
+
+    if (!username || username.length < 2) {
+      regError.textContent = '用户名至少2个字符';
+      return;
+    }
+    if (username.length > 12) {
+      regError.textContent = '用户名最多12个字符';
+      return;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      regError.textContent = '请输入有效的邮箱地址';
+      return;
+    }
+    if (!password || password.length < 6) {
+      regError.textContent = '密码至少6位';
+      return;
+    }
+    if (password !== password2) {
+      regError.textContent = '两次输入的密码不一致';
+      return;
+    }
+    if (!agreed) {
+      regError.textContent = '请先同意用户协议和隐私政策';
+      return;
+    }
+
+    regSubmit.disabled = true;
+    regSubmit.textContent = '注册中...';
+
+    if (isSupabaseReady) {
+      // Supabase 注册
+      SupabaseAPI.signUp(email, password, username).then(function(data) {
+        var user = data.user;
+        if (!user) {
+          // 需要邮箱验证
+          showToast('注册成功，请验证邮箱后登录');
+          setTimeout(function() {
+            // 切换到登录 Tab
+            document.querySelector('.auth-tab[data-tab="login"]').click();
+            document.getElementById('loginEmail').value = email;
+          }, 1200);
+          return;
+        }
+        var userData = {
+          id: user.id,
+          username: username,
+          email: user.email,
+          isVIP: false,
+          source: 'supabase',
+          created_at: user.created_at,
+        };
+        Storage.setUser(userData);
+        showToast('注册成功');
+        setTimeout(function() {
+          window.location.href = 'index.html';
+        }, 1000);
+      }).catch(function(err) {
+        regError.textContent = err.message || '注册失败';
+      }).finally(function() {
+        regSubmit.disabled = false;
+        regSubmit.textContent = '注册';
+      });
+    } else {
+      // 本地注册
+      var localUsers = Storage.get('local_users', []);
+      // 检查邮箱是否已注册
+      for (var i = 0; i < localUsers.length; i++) {
+        if (localUsers[i].email === email) {
+          regError.textContent = '该邮箱已注册';
+          regSubmit.disabled = false;
+          regSubmit.textContent = '注册';
+          return;
+        }
+      }
+      var userData = {
+        id: 'LSW' + Date.now().toString(36).toUpperCase().slice(-6),
+        username: username,
+        email: email,
+        password: password,
+        isVIP: false,
+        source: 'local',
+        created_at: new Date().toISOString(),
+      };
+      localUsers.push(userData);
+      Storage.set('local_users', localUsers);
+      Storage.setUser(userData);
+      showToast('注册成功');
+      setTimeout(function() {
+        window.location.href = 'index.html';
+      }, 1000);
+    }
+  }
+
+  /* ---- 本地快速体验 ---- */
+  function handleLocalReg() {
+    var username = '用户' + Math.floor(Math.random() * 10000);
+    var userData = {
+      id: 'LSW' + Date.now().toString(36).toUpperCase().slice(-6),
+      username: username,
+      email: '',
+      isVIP: false,
+      source: 'local',
+      created_at: new Date().toISOString(),
+    };
+    Storage.setUser(userData);
+    showToast('已进入体验模式');
+    setTimeout(function() {
+      window.location.href = 'index.html';
+    }, 800);
+  }
+
+  /* ---- 退出登录 ---- */
+  function handleLogout() {
+    if (!confirm('确定退出登录吗？')) return;
+    if (isSupabaseReady) {
+      SupabaseAPI.signOut().catch(function() {});
+    }
+    Storage.clearUser();
+    showToast('已退出登录');
+    setTimeout(function() {
+      showAuthView();
+    }, 800);
+  }
+
+  /* ---- 复制 ID ---- */
+  function handleCopyId() {
+    var idText = document.getElementById('userLaswiId').textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(idText).then(function() {
+        showToast('已复制: ' + idText);
+      });
+    } else {
+      // 降级方案
+      var textarea = document.createElement('textarea');
+      textarea.value = idText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('已复制: ' + idText);
+      } catch (e) {
+        showToast('复制失败');
+      }
+      textarea.remove();
+    }
+  }
+
+  /* ---- Toast ---- */
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(function() {
+      toast.classList.remove('show');
+    }, 2000);
+  }
+
+  /* ---- 事件绑定 ---- */
+  function bindEvents() {
+    backBtn.addEventListener('click', function() {
+      App.back();
+    });
+    loginSubmit.addEventListener('click', handleLogin);
+    regSubmit.addEventListener('click', handleRegister);
+    localRegBtn.addEventListener('click', handleLocalReg);
+    logoutBtn.addEventListener('click', handleLogout);
+    copyIdBtn.addEventListener('click', handleCopyId);
+
+    // 回车提交
+    document.getElementById('loginPassword').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleLogin();
+    });
+    document.getElementById('regPassword2').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleRegister();
+    });
+
+    // 协议弹窗
+    document.getElementById('agreeLink').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('agreementOverlay').classList.add('active');
+    });
+    document.getElementById('privacyLink').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('privacyOverlay').classList.add('active');
+    });
+    document.getElementById('agreementCloseBtn').addEventListener('click', function() {
+      document.getElementById('agreementOverlay').classList.remove('active');
+    });
+    document.getElementById('privacyCloseBtn').addEventListener('click', function() {
+      document.getElementById('privacyOverlay').classList.remove('active');
+    });
+    document.getElementById('agreementOverlay').addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('active');
+    });
+    document.getElementById('privacyOverlay').addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('active');
+    });
+  }
+
+  /* ---- 启动 ---- */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+<style>
+/* id.html 专属样式 - 磨砂玻璃全圆角 */
+
+/* Logo 区域 */
+.id-logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0 32px;
+}
+.id-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  margin-bottom: 14px;
+}
+.id-brand-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+.id-brand-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* 模式提示 */
+.id-mode-notice {
+  background: rgba(255, 149, 0, 0.1);
+  border: 0.5px solid rgba(255, 149, 0, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #FF9500;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* Tab 切换 */
+.auth-tab-bar {
+  display: flex;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  margin-bottom: 24px;
+  border: 0.5px solid var(--glass-border-subtle);
+}
+.auth-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.auth-tab.active {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 表单 */
+.auth-form-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-left: 4px;
+}
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 0.5px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 16px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  box-sizing: border-box;
+}
+.form-input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.85);
+}
+.form-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* 提交按钮 */
+.auth-submit-btn {
+  width: 100%;
+  padding: 14px 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--accent-gradient);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.2s;
+  margin-top: 8px;
+}
+.auth-submit-btn:disabled {
+  opacity: 0.6;
+}
+.auth-submit-btn:active {
+  transform: scale(0.96);
+}
+
+/* 错误提示 */
+.auth-error {
+  font-size: 14px;
+  color: #FF3B30;
+  text-align: center;
+  min-height: 20px;
+}
+
+/* 协议勾选 */
+.auth-agree-row {
+  margin-top: 4px;
+}
+.auth-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.auth-checkbox-label input[type="checkbox"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.auth-checkbox-label a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* 分割线 */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 0.5px;
+  background: var(--separator);
+}
+.auth-divider-text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+/* 本地注册按钮 */
+.auth-local-btn {
+  width: 100%;
+  padding: 12px 0;
+  border: 0.5px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 15px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.auth-local-btn:active {
+  transform: scale(0.96);
+}
+
+/* 已登录 - 用户卡片 */
+.id-user-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-radius: var(--radius-xl);
+  border: 0.5px solid var(--glass-border-subtle);
+  box-shadow: var(--shadow-glass);
+  padding: 20px 16px;
+  margin-bottom: 12px;
+}
+.id-user-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-md);
+}
+.id-user-info {
+  flex: 1;
+  min-width: 0;
+}
+.id-user-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.id-user-email {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* 详情卡片 */
+.id-detail-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-radius: var(--radius-xl);
+  border: 0.5px solid var(--glass-border-subtle);
+  box-shadow: var(--shadow-glass);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.id-detail-row {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--separator);
+  gap: 8px;
+}
+.id-detail-row:last-child {
+  border-bottom: none;
+}
+.id-detail-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  min-width: 70px;
+}
+.id-detail-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+  flex: 1;
+  word-break: break-all;
+}
+.id-copy-btn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border: 0.5px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  background: var(--glass-bg-light);
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.id-copy-btn:active {
+  transform: scale(0.94);
+}
+
+/* 退出按钮 */
+.id-action-btn {
+  width: 100%;
+  padding: 14px 0;
+  border: 0.5px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.id-logout-btn {
+  color: #FF3B30;
+}
+.id-logout-btn:active {
+  transform: scale(0.96);
+}
+
+/* 返回按钮 */
+.header-back-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+.header-back-btn:active {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* 法律文档弹窗 */
+.legal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  display: none; align-items: center; justify-content: center;
+  z-index: 10000; padding: 20px;
+}
+.legal-overlay.active { display: flex; }
+.legal-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+  border-radius: 24px; max-width: 480px; width: 100%; max-height: 85vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+.legal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px; border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+.legal-title { font-size: 18px; font-weight: 700; color: #1D1D1F; }
+.legal-close {
+  width: 32px; height: 32px; border: none; background: rgba(0, 0, 0, 0.06);
+  border-radius: 50%; font-size: 20px; color: #86868B; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.legal-body {
+  padding: 20px 24px 24px; overflow-y: auto; flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+.legal-body h3 {
+  font-size: 16px; font-weight: 700; color: #1D1D1F; margin: 24px 0 10px;
+}
+.legal-body h3:first-of-type { margin-top: 12px; }
+.legal-body p {
+  font-size: 14px; color: #3A3A3C; line-height: 1.75;
+  margin-bottom: 8px; text-align: justify;
+}
+.legal-body strong { color: #1D1D1F; font-weight: 600; }
+.legal-updated {
+  font-size: 13px !important; color: #86868B !important;
+  margin-bottom: 16px !important; padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 12px 28px;
+  font-size: 15px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 9999px;
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+</style>
+</body>
+</html>

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>时钟 - 我是晓松</title>
+<link rel="stylesheet" href="css/common.css">
+<style>
+  .clock-tabs {
+    display: flex; gap: 0; padding: 8px 16px;
+  }
+  .clock-tab {
+    flex: 1; padding: 10px; text-align: center;
+    font-size: 14px; font-weight: 500; color: var(--text-2);
+    cursor: pointer; border-radius: 100px; transition: all 0.2s;
+    background: var(--glass-bg-light); backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.4); margin: 0 4px;
+  }
+  .clock-tab.active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+
+  .clock-panel { display: none; flex: 1; flex-direction: column; }
+  .clock-panel.show { display: flex; }
+
+  /* 世界时钟 */
+  .clock-world-display {
+    background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 28px; padding: 32px; margin: 12px 16px; text-align: center;
+  }
+  .clock-time-big {
+    font-size: 64px; font-weight: 200; color: var(--text-primary);
+    line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .clock-date {
+    font-size: 15px; color: var(--text-2); margin-top: 8px;
+  }
+  .clock-city-display {
+    font-size: 18px; font-weight: 600; color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .clock-city-list {
+    padding: 0 16px;
+  }
+  .clock-city-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 18px; padding: 14px 16px; margin-bottom: 10px;
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .clock-city-item:active { transform: scale(0.97); }
+  .clock-city-name { font-size: 16px; font-weight: 500; color: var(--text-1); }
+  .clock-city-tz { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .clock-city-time { font-size: 24px; font-weight: 300; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  /* 闹钟 */
+  .alarm-add-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px;
+  }
+  .alarm-add-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #fff; border: none;
+    padding: 10px 20px; border-radius: 100px; font-size: 14px;
+    font-weight: 600; cursor: pointer; transition: transform 0.15s;
+  }
+  .alarm-add-btn:active { transform: scale(0.95); }
+  .alarm-list { padding: 0 16px; }
+  .alarm-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 18px; padding: 14px 16px; margin-bottom: 10px;
+  }
+  .alarm-info { display: flex; flex-direction: column; }
+  .alarm-time { font-size: 28px; font-weight: 300; color: var(--text-1); font-variant-numeric: tabular-nums; }
+  .alarm-label { font-size: 13px; color: var(--text-3); margin-top: 2px; }
+  .alarm-toggle {
+    width: 48px; height: 28px; border-radius: 100px;
+    background: #E5E5EA; border: none; cursor: pointer;
+    position: relative; transition: background 0.2s;
+  }
+  .alarm-toggle.on { background: #34C759; }
+  .alarm-toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 24px; height: 24px; border-radius: 50%; background: #fff;
+    transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .alarm-toggle.on::after { transform: translateX(20px); }
+  .alarm-empty { text-align: center; padding: 40px; color: var(--text-3); font-size: 14px; }
+
+  /* 秒表 */
+  .stopwatch-display {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .stopwatch-time {
+    font-size: 72px; font-weight: 200; color: var(--text-primary);
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .stopwatch-ms {
+    font-size: 28px; color: var(--accent); font-weight: 300;
+  }
+  .stopwatch-controls {
+    display: flex; gap: 16px; margin-top: 40px;
+  }
+  .stopwatch-btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    border: none; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: transform 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stopwatch-btn:active { transform: scale(0.9); }
+  .stopwatch-btn.start { background: #34C759; color: #fff; }
+  .stopwatch-btn.stop { background: #FF3B30; color: #fff; }
+  .stopwatch-btn.lap { background: var(--glass-bg-heavy); color: var(--text-1); border: 1px solid rgba(255,255,255,0.6); }
+  .stopwatch-btn.reset { background: var(--glass-bg-light); color: var(--text-2); border: 1px solid rgba(255,255,255,0.4); }
+
+  .stopwatch-laps {
+    padding: 0 16px; margin-top: 20px; max-height: 200px; overflow-y: auto;
+  }
+  .lap-item {
+    display: flex; justify-content: space-between;
+    padding: 10px 4px; border-bottom: 0.5px solid var(--separator);
+    font-size: 15px; font-variant-numeric: tabular-nums;
+  }
+  .lap-num { color: var(--text-3); }
+  .lap-time { color: var(--text-1); font-weight: 500; }
+
+  /* 计时器 */
+  .timer-display {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .timer-input-row {
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+  }
+  .timer-input-group {
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .timer-input {
+    width: 80px; height: 80px; border: none; outline: none;
+    background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 20px; font-size: 36px; font-weight: 300;
+    color: var(--text-1); text-align: center; font-family: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+  .timer-input-label { font-size: 13px; color: var(--text-3); margin-top: 8px; }
+  .timer-colon { font-size: 36px; font-weight: 200; color: var(--text-3); }
+  .timer-time-display {
+    font-size: 64px; font-weight: 200; color: var(--text-primary);
+    font-variant-numeric: tabular-nums; line-height: 1; display: none;
+  }
+  .timer-time-display.show { display: block; }
+  .timer-controls {
+    display: flex; gap: 16px; margin-top: 40px;
+  }
+  .timer-progress-ring {
+    width: 200px; height: 200px; margin-bottom: 20px;
+    display: none; position: relative;
+  }
+  .timer-progress-ring.show { display: flex; align-items: center; justify-content: center; }
+  .timer-progress-ring svg { transform: rotate(-90deg); }
+  .timer-progress-bg { fill: none; stroke: rgba(255,255,255,0.3); stroke-width: 6; }
+  .timer-progress-fg { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.5s; }
+
+  /* 弹窗 */
+  .clock-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 10000; padding: 20px;
+  }
+  .clock-modal-overlay.active { display: flex; }
+  .clock-modal {
+    background: rgba(255,255,255,0.92); backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border-radius: 24px; padding: 24px; width: 100%; max-width: 360px;
+    box-shadow: var(--shadow-xl);
+  }
+  .clock-modal-title { font-size: 17px; font-weight: 600; text-align: center; margin-bottom: 16px; }
+  .clock-modal-time-picker {
+    display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px;
+  }
+  .clock-modal-time-picker select {
+    font-size: 24px; font-weight: 300; padding: 8px 12px;
+    border: 1px solid rgba(0,0,0,0.1); border-radius: 12px;
+    background: rgba(255,255,255,0.8); color: var(--text-1);
+    font-family: inherit;
+  }
+  .clock-modal-label { font-size: 14px; color: var(--text-2); margin-bottom: 8px; }
+  .clock-modal-input {
+    width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 12px; font-size: 15px; margin-bottom: 16px;
+    background: rgba(255,255,255,0.6); font-family: inherit;
+  }
+  .clock-modal-actions { display: flex; gap: 8px; }
+  .clock-modal-btn {
+    flex: 1; padding: 12px; border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .clock-modal-btn.cancel { background: rgba(0,0,0,0.06); color: var(--text-1); }
+  .clock-modal-btn.confirm { background: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- 顶部栏 -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="header-back-btn" onclick="App.back()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+      </div>
+      <div class="header-title">时钟</div>
+      <div class="header-right"></div>
+    </div>
+  </header>
+
+  <!-- 内容区 -->
+  <div class="content">
+    <div class="content-inner">
+      <!-- Tab 切换 -->
+      <div class="clock-tabs">
+        <div class="clock-tab active" onclick="switchTab('world')">世界时钟</div>
+        <div class="clock-tab" onclick="switchTab('alarm')">闹钟</div>
+        <div class="clock-tab" onclick="switchTab('stopwatch')">秒表</div>
+        <div class="clock-tab" onclick="switchTab('timer')">计时器</div>
+      </div>
+
+      <!-- 世界时钟面板 -->
+      <div class="clock-panel show" id="panel-world">
+        <div class="clock-world-display">
+          <div class="clock-city-display" id="currentCity">北京</div>
+          <div class="clock-time-big" id="currentTime">00:00</div>
+          <div class="clock-date" id="currentDate">--</div>
+        </div>
+        <div class="clock-city-list" id="cityList"></div>
+        <div style="height: 40px;"></div>
+      </div>
+
+      <!-- 闹钟面板 -->
+      <div class="clock-panel" id="panel-alarm">
+        <div class="alarm-add-bar">
+          <span style="font-size:14px;color:var(--text-2);">我的闹钟</span>
+          <button class="alarm-add-btn" onclick="showAlarmModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            添加闹钟
+          </button>
+        </div>
+        <div class="alarm-list" id="alarmList"></div>
+        <div style="height: 40px;"></div>
+      </div>
+
+      <!-- 秒表面板 -->
+      <div class="clock-panel" id="panel-stopwatch">
+        <div class="stopwatch-display">
+          <div class="stopwatch-time" id="stopwatchDisplay">00:00</div>
+          <div class="stopwatch-ms" id="stopwatchMs">.00</div>
+          <div class="stopwatch-controls">
+            <button class="stopwatch-btn start" id="swStartBtn" onclick="stopwatchToggle()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
+            </button>
+            <button class="stopwatch-btn lap" onclick="stopwatchLap()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button class="stopwatch-btn reset" onclick="stopwatchReset()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9c2.49 0 4.74 1.01 6.36 2.64L21 8"/><path d="M21 3v5h-5"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="stopwatch-laps" id="lapList"></div>
+      </div>
+
+      <!-- 计时器面板 -->
+      <div class="clock-panel" id="panel-timer">
+        <div class="timer-display">
+          <div class="timer-input-row" id="timerInputRow">
+            <div class="timer-input-group">
+              <input type="number" class="timer-input" id="timerH" value="0" min="0" max="23">
+              <div class="timer-input-label">小时</div>
+            </div>
+            <div class="timer-colon">:</div>
+            <div class="timer-input-group">
+              <input type="number" class="timer-input" id="timerM" value="5" min="0" max="59">
+              <div class="timer-input-label">分钟</div>
+            </div>
+            <div class="timer-colon">:</div>
+            <div class="timer-input-group">
+              <input type="number" class="timer-input" id="timerS" value="0" min="0" max="59">
+              <div class="timer-input-label">秒</div>
+            </div>
+          </div>
+          <div class="timer-time-display" id="timerDisplay">00:05:00</div>
+          <div class="timer-controls">
+            <button class="stopwatch-btn start" id="timerStartBtn" onclick="timerToggle()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
+            </button>
+            <button class="stopwatch-btn reset" onclick="timerReset()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9c2.49 0 4.74 1.01 6.36 2.64L21 8"/><path d="M21 3v5h-5"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 闹钟弹窗 -->
+<div class="clock-modal-overlay" id="alarmModal">
+  <div class="clock-modal">
+    <div class="clock-modal-title">设置闹钟</div>
+    <div class="clock-modal-time-picker">
+      <select id="alarmHour">
+        <option value="6">06</option><option value="7">07</option><option value="8">08</option>
+        <option value="9">09</option><option value="10">10</option><option value="11">11</option>
+        <option value="12">12</option><option value="13">13</option><option value="14">14</option>
+        <option value="15">15</option><option value="16">16</option><option value="17">17</option>
+        <option value="18">18</option><option value="19">19</option><option value="20">20</option>
+        <option value="21">21</option><option value="22">22</option><option value="23">23</option>
+        <option value="0">00</option><option value="1">01</option><option value="2">02</option>
+        <option value="3">03</option><option value="4">04</option><option value="5">05</option>
+      </select>
+      <span style="font-size:24px;">:</span>
+      <select id="alarmMinute">
+        <option value="0">00</option><option value="5">05</option><option value="10">10</option>
+        <option value="15">15</option><option value="20">20</option><option value="25">25</option>
+        <option value="30">30</option><option value="35">35</option><option value="40">40</option>
+        <option value="45">45</option><option value="50">50</option><option value="55">55</option>
+      </select>
+    </div>
+    <div class="clock-modal-label">闹钟标签</div>
+    <input type="text" class="clock-modal-input" id="alarmLabel" placeholder="如：起床、开会">
+    <div class="clock-modal-actions">
+      <button class="clock-modal-btn cancel" onclick="closeAlarmModal()">取消</button>
+      <button class="clock-modal-btn confirm" onclick="addAlarm()">确定</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script>
+App.init('discover');
+
+/* ========== Tab 切换 ========== */
+function switchTab(tab) {
+  document.querySelectorAll('.clock-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.clock-panel').forEach(function(p) { p.classList.remove('show'); });
+  event.target.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('show');
+}
+
+/* ========== 世界时钟 ========== */
+var WORLD_CITIES = [
+  { name: '北京', tz: 'Asia/Shanghai' },
+  { name: '东京', tz: 'Asia/Tokyo' },
+  { name: '伦敦', tz: 'Europe/London' },
+  { name: '纽约', tz: 'America/New_York' },
+  { name: '洛杉矶', tz: 'America/Los_Angeles' },
+  { name: '悉尼', tz: 'Australia/Sydney' },
+  { name: '迪拜', tz: 'Asia/Dubai' },
+  { name: '巴黎', tz: 'Europe/Paris' },
+];
+
+function updateWorldClock() {
+  var now = new Date();
+  // 北京时间
+  var beijingTime = now.toLocaleTimeString('zh-CN', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hour12: false });
+  var beijingDate = now.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  document.getElementById('currentTime').textContent = beijingTime;
+  document.getElementById('currentDate').textContent = beijingDate;
+
+  // 世界城市
+  var html = '';
+  WORLD_CITIES.forEach(function(city) {
+    if (city.name === '北京') return;
+    var time = now.toLocaleTimeString('zh-CN', { timeZone: city.tz, hour: '2-digit', minute: '2-digit', hour12: false });
+    var date = now.toLocaleDateString('zh-CN', { timeZone: city.tz, month: 'short', day: 'numeric' });
+    html += '<div class="clock-city-item">' +
+      '<div><div class="clock-city-name">' + city.name + '</div>' +
+      '<div class="clock-city-tz">' + date + '</div></div>' +
+      '<div class="clock-city-time">' + time + '</div>' +
+    '</div>';
+  });
+  document.getElementById('cityList').innerHTML = html;
+}
+
+setInterval(updateWorldClock, 1000);
+updateWorldClock();
+
+/* ========== 闹钟 ========== */
+function loadAlarms() {
+  var alarms = Storage.get('alarms', []);
+  var list = document.getElementById('alarmList');
+
+  if (alarms.length === 0) {
+    list.innerHTML = '<div class="alarm-empty">还没有闹钟，点击右上角添加</div>';
+    return;
+  }
+
+  var html = '';
+  alarms.forEach(function(alarm, i) {
+    var timeStr = String(alarm.hour).padStart(2, '0') + ':' + String(alarm.minute).padStart(2, '0');
+    html += '<div class="alarm-item">' +
+      '<div class="alarm-info">' +
+        '<div class="alarm-time">' + timeStr + '</div>' +
+        '<div class="alarm-label">' + Utils.escapeHtml(alarm.label || '闹钟') + '</div>' +
+      '</div>' +
+      '<button class="alarm-toggle ' + (alarm.enabled ? 'on' : '') + '" onclick="toggleAlarm(' + i + ')"></button>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function showAlarmModal() {
+  var now = new Date();
+  document.getElementById('alarmHour').value = now.getHours();
+  document.getElementById('alarmMinute').value = Math.ceil(now.getMinutes() / 5) * 5 % 60;
+  document.getElementById('alarmLabel').value = '';
+  document.getElementById('alarmModal').classList.add('active');
+}
+
+function closeAlarmModal() {
+  document.getElementById('alarmModal').classList.remove('active');
+}
+
+function addAlarm() {
+  var hour = parseInt(document.getElementById('alarmHour').value);
+  var minute = parseInt(document.getElementById('alarmMinute').value);
+  var label = document.getElementById('alarmLabel').value.trim() || '闹钟';
+
+  var alarms = Storage.get('alarms', []);
+  alarms.push({
+    id: Utils.generateId(),
+    hour: hour,
+    minute: minute,
+    label: label,
+    enabled: true,
+  });
+  Storage.set('alarms', alarms);
+
+  closeAlarmModal();
+  loadAlarms();
+}
+
+function toggleAlarm(index) {
+  var alarms = Storage.get('alarms', []);
+  if (alarms[index]) {
+    alarms[index].enabled = !alarms[index].enabled;
+    Storage.set('alarms', alarms);
+    loadAlarms();
+  }
+}
+
+// 闹钟检查
+function checkAlarms() {
+  var now = new Date();
+  var alarms = Storage.get('alarms', []);
+  alarms.forEach(function(alarm) {
+    if (!alarm.enabled) return;
+    if (now.getHours() === alarm.hour && now.getMinutes() === alarm.minute && now.getSeconds() < 2) {
+      Speaker.speak('闹钟时间到了: ' + (alarm.label || ''));
+      if (confirm('闹钟: ' + (alarm.label || '') + '\n是否关闭?')) {
+        alarm.enabled = false;
+        Storage.set('alarms', alarms);
+        loadAlarms();
+      }
+    }
+  });
+}
+setInterval(checkAlarms, 1000);
+loadAlarms();
+
+/* ========== 秒表 ========== */
+var swInterval = null;
+var swStartTime = 0;
+var swElapsed = 0;
+var swLaps = [];
+
+function stopwatchToggle() {
+  var btn = document.getElementById('swStartBtn');
+  if (swInterval) {
+    // 暂停
+    clearInterval(swInterval);
+    swInterval = null;
+    swElapsed += Date.now() - swStartTime;
+    btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
+    btn.classList.remove('stop');
+    btn.classList.add('start');
+  } else {
+    // 开始
+    swStartTime = Date.now();
+    swInterval = setInterval(updateStopwatch, 50);
+    btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    btn.classList.remove('start');
+    btn.classList.add('stop');
+  }
+}
+
+function updateStopwatch() {
+  var elapsed = swElapsed + (swInterval ? Date.now() - swStartTime : 0);
+  var ms = elapsed % 1000;
+  var totalSec = Math.floor(elapsed / 1000);
+  var min = Math.floor(totalSec / 60);
+  var sec = totalSec % 60;
+  document.getElementById('stopwatchDisplay').textContent =
+    String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  document.getElementById('stopwatchMs').textContent = '.' + String(Math.floor(ms / 10)).padStart(2, '0');
+}
+
+function stopwatchLap() {
+  if (!swInterval && swElapsed === 0) return;
+  var elapsed = swElapsed + (swInterval ? Date.now() - swStartTime : 0);
+  var totalSec = Math.floor(elapsed / 1000);
+  var min = Math.floor(totalSec / 60);
+  var sec = totalSec % 60;
+  var ms = elapsed % 1000;
+  swLaps.unshift({
+    num: swLaps.length + 1,
+    time: String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0') + '.' + String(Math.floor(ms / 10)).padStart(2, '0'),
+  });
+  renderLaps();
+}
+
+function stopwatchReset() {
+  clearInterval(swInterval);
+  swInterval = null;
+  swElapsed = 0;
+  swStartTime = 0;
+  swLaps = [];
+  document.getElementById('stopwatchDisplay').textContent = '00:00';
+  document.getElementById('stopwatchMs').textContent = '.00';
+  document.getElementById('swStartBtn').innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
+  document.getElementById('swStartBtn').classList.remove('stop');
+  document.getElementById('swStartBtn').classList.add('start');
+  renderLaps();
+}
+
+function renderLaps() {
+  var html = '';
+  swLaps.forEach(function(lap) {
+    html += '<div class="lap-item"><span class="lap-num">圈 ' + lap.num + '</span><span class="lap-time">' + lap.time + '</span></div>';
+  });
+  document.getElementById('lapList').innerHTML = html;
+}
+
+/* ========== 计时器 ========== */
+var timerInterval = null;
+var timerRemaining = 0;
+var timerTotal = 0;
+
+function timerToggle() {
+  var btn = document.getElementById('timerStartBtn');
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
+    btn.classList.remove('stop');
+    btn.classList.add('start');
+  } else {
+    if (timerRemaining > 0) {
+      // 继续
+    } else {
+      // 新计时
+      var h = parseInt(document.getElementById('timerH').value) || 0;
+      var m = parseInt(document.getElementById('timerM').value) || 0;
+      var s = parseInt(document.getElementById('timerS').value) || 0;
+      timerTotal = (h * 3600 + m * 60 + s) * 1000;
+      timerRemaining = timerTotal;
+      if (timerTotal === 0) return;
+      document.getElementById('timerInputRow').style.display = 'none';
+      document.getElementById('timerDisplay').classList.add('show');
+    }
+    timerInterval = setInterval(updateTimer, 100);
+    btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    btn.classList.remove('start');
+    btn.classList.add('stop');
+  }
+}
+
+function updateTimer() {
+  timerRemaining -= 100;
+  if (timerRemaining <= 0) {
+    timerRemaining = 0;
+    clearInterval(timerInterval);
+    timerInterval = null;
+    Speaker.speak('计时器时间到了');
+    document.getElementById('timerStartBtn').innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
+    document.getElementById('timerStartBtn').classList.remove('stop');
+    document.getElementById('timerStartBtn').classList.add('start');
+    alert('计时器时间到了');
+  }
+  var totalSec = Math.ceil(timerRemaining / 1000);
+  var h = Math.floor(totalSec / 3600);
+  var m = Math.floor((totalSec % 3600) / 60);
+  var s = totalSec % 60;
+  document.getElementById('timerDisplay').textContent =
+    String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function timerReset() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  timerRemaining = 0;
+  timerTotal = 0;
+  document.getElementById('timerInputRow').style.display = 'flex';
+  document.getElementById('timerDisplay').classList.remove('show');
+  document.getElementById('timerStartBtn').innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
+  document.getElementById('timerStartBtn').classList.remove('stop');
+  document.getElementById('timerStartBtn').classList.add('start');
+}
+</script>
+</body>
+</html>

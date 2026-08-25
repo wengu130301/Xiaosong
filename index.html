@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>我是晓松</title>
+  <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+
+<!-- 页面容器 -->
+<div class="page" id="page">
+
+  <!-- 顶部栏 - 磨砂玻璃全宽 -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <img class="header-avatar" src="assets/xiaosong-avatar.png" alt="晓松">
+      </div>
+      <div class="header-title" id="headerTitle">我是晓松</div>
+      <div class="header-right">
+        <button class="header-icon-btn" id="historyBtn" title="清空记录">
+          <img src="assets/history-fill.png" alt="历史">
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 对话区域 -->
+  <main class="content" id="chatContent">
+    <div class="content-inner">
+      <div class="chat-list" id="chatList">
+        <!-- 消息动态插入 -->
+      </div>
+    </div>
+  </main>
+
+  <!-- 底部输入栏 - 磨砂玻璃全宽 -->
+  <div class="input-bar" id="inputBar">
+    <!-- 画图模式指示条 -->
+    <div class="image-mode-bar" id="imageModeBar">
+      <div class="image-mode-tag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#AF52DE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+        <span>AI 画图模式</span>
+      </div>
+      <button class="image-mode-exit" id="imageModeExit">退出</button>
+    </div>
+    <div class="input-inner">
+      <button class="input-voice-btn" id="voiceBtn" title="语音输入">
+        <img src="assets/voice-ai-line.png" alt="语音">
+      </button>
+      <button class="input-image-btn" id="imageBtn" title="AI画图">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#86868B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      </button>
+      <div class="input-wrap">
+        <textarea
+          class="input-field"
+          id="inputField"
+          placeholder="发消息..."
+          rows="1"
+        ></textarea>
+      </div>
+      <button class="input-send-btn" id="sendBtn" disabled>
+        <img src="assets/send-ins-line.png" alt="发送">
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 欢迎弹窗 -->
+<div class="welcome-overlay" id="welcomeOverlay">
+  <div class="welcome-card">
+    <img class="welcome-avatar" src="assets/xiaosong-avatar.png" alt="晓松">
+    <div class="welcome-text">
+      <div class="welcome-hello">你好</div>
+      <div class="welcome-name">我是晓松</div>
+      <div class="welcome-desc">你的私人助理</div>
+      <div class="welcome-greeting">很高兴认识你</div>
+    </div>
+    <button class="welcome-btn" id="welcomeBtn">开始使用</button>
+  </div>
+</div>
+
+<!-- 语音录制浮层 -->
+<div class="voice-overlay" id="voiceOverlay">
+  <div class="voice-card">
+    <div class="voice-pulse-wrap">
+      <div class="voice-pulse"></div>
+      <div class="voice-pulse voice-pulse-2"></div>
+      <img class="voice-mic-icon" src="assets/voice-ai-line.png" alt="语音">
+    </div>
+    <div class="voice-status" id="voiceStatus">正在聆听...</div>
+    <div class="voice-text" id="voiceText"></div>
+    <button class="voice-cancel-btn" id="voiceCancelBtn">取消</button>
+  </div>
+</div>
+
+<!-- 脚本 -->
+<script src="js/api.js"></script>
+<script src="js/common.js"></script>
+<script src="js/xiaosong.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // DOM
+  var welcomeOverlay = document.getElementById('welcomeOverlay');
+  var welcomeBtn = document.getElementById('welcomeBtn');
+  var chatList = document.getElementById('chatList');
+  var chatContent = document.getElementById('chatContent');
+  var inputField = document.getElementById('inputField');
+  var sendBtn = document.getElementById('sendBtn');
+  var voiceBtn = document.getElementById('voiceBtn');
+  var historyBtn = document.getElementById('historyBtn');
+  var headerTitle = document.getElementById('headerTitle');
+  var imageBtn = document.getElementById('imageBtn');
+  var imageModeBar = document.getElementById('imageModeBar');
+  var imageModeExit = document.getElementById('imageModeExit');
+  var inputBar = document.getElementById('inputBar');
+
+  // 画图模式
+  var imageMode = false;
+
+  /* ---- 初始化 ---- */
+  function init() {
+    App.init('chat');
+    Xiaosong.init();
+
+    if (Storage.isFirstLaunch()) {
+      showWelcome();
+    } else {
+      renderHistory();
+      if (Xiaosong.messages.length === 0) {
+        addGreeting();
+      }
+    }
+    bindEvents();
+  }
+
+  /* ---- 欢迎弹窗 ---- */
+  function showWelcome() {
+    welcomeOverlay.classList.add('show');
+  }
+
+  function hideWelcome() {
+    welcomeOverlay.classList.add('hide');
+    setTimeout(function() {
+      welcomeOverlay.style.display = 'none';
+    }, 400);
+    Storage.markLaunched();
+    addGreeting();
+  }
+
+  /* ---- 消息渲染 ---- */
+
+  function addGreeting() {
+    var msg = {
+      role: 'assistant',
+      content: '你好！我是晓松。有什么可以帮你的吗？',
+      time: new Date().toISOString(),
+    };
+    Xiaosong.messages.push(msg);
+    Storage.saveMessages('xiaosong', Xiaosong.messages);
+    appendMessage(msg);
+  }
+
+  function renderHistory() {
+    chatList.innerHTML = '';
+    var messages = Xiaosong.getHistory();
+    var lastTime = '';
+    for (var i = 0; i < messages.length; i++) {
+      var msg = messages[i];
+      var timeStr = getTimeLabel(msg.time);
+      if (timeStr && timeStr !== lastTime) {
+        appendTimeSep(timeStr);
+        lastTime = timeStr;
+      }
+      appendMessage(msg);
+    }
+    scrollToBottom();
+  }
+
+  function appendTimeSep(label) {
+    var sep = document.createElement('div');
+    sep.className = 'chat-time-sep';
+    sep.innerHTML = '<span>' + label + '</span>';
+    chatList.appendChild(sep);
+  }
+
+  function getTimeLabel(time) {
+    if (!time) return '';
+    var d = new Date(time);
+    var now = new Date();
+    var h = String(d.getHours()).padStart(2, '0');
+    var m = String(d.getMinutes()).padStart(2, '0');
+    var isToday = d.toDateString() === now.toDateString();
+    if (isToday) return h + ':' + m;
+    var yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) {
+      return '昨天 ' + h + ':' + m;
+    }
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + h + ':' + m;
+  }
+
+  function appendMessage(msg) {
+    var isUser = msg.role === 'user';
+    var wrapper = document.createElement('div');
+    wrapper.className = 'message ' + (isUser ? 'message-user' : 'message-xiaosong');
+
+    var avatarHtml;
+    if (isUser) {
+      var user = Storage.getUser();
+      var initial = user ? (user.username || '我').charAt(0) : '我';
+      avatarHtml = '<div class="message-avatar">' + escapeHtml(initial) + '</div>';
+    } else {
+      avatarHtml = '<img class="message-avatar" src="assets/xiaosong-avatar.png" alt="晓松">';
+    }
+
+    var bubbleInner = '';
+
+    if (msg.agentName) {
+      bubbleInner += '<div class="message-agent-tag"><span class="tag-dot"></span>' + escapeHtml(msg.agentName) + '</div>';
+    }
+
+    bubbleInner += '<div class="message-text">' + renderText(msg.content) + '</div>';
+
+    if (msg.routes) {
+      for (var i = 0; i < msg.routes.length; i++) {
+        var info = Xiaosong.getRouteInfo(msg.routes[i].tool, msg.routes[i].params);
+        if (!info) continue;
+        bubbleInner += '<div class="route-card" data-url="' + info.url + info.param + '">' +
+          '<span class="route-card-text">' + escapeHtml(info.label) + '</span>' +
+          '<span class="route-card-arrow">&rsaquo;</span>' +
+          '</div>';
+      }
+    }
+
+    wrapper.innerHTML =
+      avatarHtml +
+      '<div class="message-body">' +
+      '<div class="message-bubble">' + bubbleInner + '</div>' +
+      '</div>';
+
+    if (msg.routes) {
+      var cards = wrapper.querySelectorAll('.route-card');
+      for (var j = 0; j < cards.length; j++) {
+        (function(card) {
+          card.addEventListener('click', function() {
+            window.location.href = card.getAttribute('data-url');
+          });
+        })(cards[j]);
+      }
+    }
+
+    chatList.appendChild(wrapper);
+    scrollToBottom();
+    return wrapper;
+  }
+
+  function appendTyping() {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'message message-xiaosong';
+    wrapper.id = 'typingMsg';
+
+    wrapper.innerHTML =
+      '<img class="message-avatar" src="assets/xiaosong-avatar.png" alt="晓松">' +
+      '<div class="message-body">' +
+      '<div class="message-bubble message-bubble-loading">' +
+      '<div class="message-loading-dots">' +
+      '<span class="dot"></span>' +
+      '<span class="dot"></span>' +
+      '<span class="dot"></span>' +
+      '</div>' +
+      '</div>' +
+      '</div>';
+
+    chatList.appendChild(wrapper);
+    scrollToBottom();
+    return wrapper;
+  }
+
+  function typingToMessage(typingEl, text, agentName, routes, images) {
+    var bubble = typingEl.querySelector('.message-bubble');
+    bubble.classList.remove('message-bubble-loading');
+    bubble.innerHTML = '';
+
+    if (agentName) {
+      var tag = document.createElement('div');
+      tag.className = 'message-agent-tag';
+      tag.innerHTML = '<span class="tag-dot"></span>' + escapeHtml(agentName);
+      bubble.appendChild(tag);
+    }
+
+    var textDiv = document.createElement('div');
+    textDiv.className = 'message-text';
+    textDiv.innerHTML = renderText(text);
+    bubble.appendChild(textDiv);
+
+    if (routes && routes.length > 0) {
+      for (var i = 0; i < routes.length; i++) {
+        var info = Xiaosong.getRouteInfo(routes[i].tool, routes[i].params);
+        if (!info) continue;
+        var card = document.createElement('div');
+        card.className = 'route-card';
+        card.innerHTML =
+          '<span class="route-card-text">' + escapeHtml(info.label) + '</span>' +
+          '<span class="route-card-arrow">&rsaquo;</span>';
+        (function(card, url) {
+          card.addEventListener('click', function() {
+            window.location.href = url;
+          });
+        })(card, info.url + info.param);
+        bubble.appendChild(card);
+      }
+    }
+
+    if (images && images.length > 0) {
+      for (var j = 0; j < images.length; j++) {
+        (function(prompt) {
+          var imgCard = document.createElement('div');
+          imgCard.className = 'image-gen-card';
+          imgCard.innerHTML =
+            '<div class="image-gen-loading">' +
+            '<div class="image-gen-spinner"></div>' +
+            '<div class="image-gen-loading-text">正在为你绘制图片...</div>' +
+            '<div class="image-gen-prompt">' + escapeHtml(prompt) + '</div>' +
+            '</div>';
+          bubble.appendChild(imgCard);
+
+          Xiaosong.generateImage(prompt, function(url) {
+            if (url) {
+              imgCard.innerHTML =
+                '<div class="image-gen-result">' +
+                '<img class="image-gen-img" src="' + url + '" alt="' + escapeHtml(prompt) + '">' +
+                '<div class="image-gen-actions">' +
+                '<span class="image-gen-prompt-text">' + escapeHtml(prompt) + '</span>' +
+                '<button class="image-gen-save-btn">保存图片</button>' +
+                '</div>' +
+                '</div>';
+              var saveBtn = imgCard.querySelector('.image-gen-save-btn');
+              if (saveBtn) {
+                saveBtn.addEventListener('click', function() {
+                  downloadImage(url, prompt);
+                });
+              }
+            } else {
+              imgCard.innerHTML = '<div class="image-gen-error">图片生成失败</div>';
+            }
+          });
+        })(images[j]);
+      }
+    }
+
+    return textDiv;
+  }
+
+  function updateStreamingText(typingEl, fullText) {
+    var bubble = typingEl.querySelector('.message-bubble');
+    if (bubble.classList.contains('message-bubble-loading')) {
+      bubble.classList.remove('message-bubble-loading');
+      bubble.innerHTML = '<div class="message-text"></div>';
+    }
+    var textDiv = bubble.querySelector('.message-text');
+    if (textDiv) {
+      textDiv.innerHTML = renderText(fullText);
+    }
+    scrollToBottom();
+  }
+
+  /* ---- 画图模式 ---- */
+
+  function toggleImageMode() {
+    imageMode = !imageMode;
+    if (imageMode) {
+      inputBar.classList.add('image-mode');
+      imageModeBar.classList.add('active');
+      inputField.placeholder = '描述你想要的图片，比如：一只在月光下的橘猫...';
+      inputField.focus();
+    } else {
+      inputBar.classList.remove('image-mode');
+      imageModeBar.classList.remove('active');
+      inputField.placeholder = '发消息...';
+    }
+    updateSendBtn();
+  }
+
+  function exitImageMode() {
+    imageMode = false;
+    inputBar.classList.remove('image-mode');
+    imageModeBar.classList.remove('active');
+    inputField.placeholder = '发消息...';
+    updateSendBtn();
+  }
+
+  /* ---- 发送消息 ---- */
+
+  function sendMessage() {
+    var text = inputField.value.trim();
+    if (!text || Xiaosong.isReplying) return;
+
+    inputField.value = '';
+    inputField.style.height = 'auto';
+    updateSendBtn();
+
+    // 画图模式：直接调用 CogView
+    if (imageMode) {
+      sendImageRequest(text);
+      return;
+    }
+
+    var userMsg = {
+      role: 'user',
+      content: text,
+      time: new Date().toISOString(),
+    };
+    appendMessage(userMsg);
+
+    var typingEl = appendTyping();
+
+    Xiaosong.sendMessage(text, {
+      onUserMsg: function() {},
+      onStart: function(agentName) {
+        if (agentName) {
+          headerTitle.textContent = agentName;
+        } else {
+          headerTitle.textContent = '我是晓松';
+        }
+      },
+      onChunk: function(chunk, full) {
+        updateStreamingText(typingEl, full);
+      },
+      onComplete: function(cleanText, agentName, routes, images) {
+        typingToMessage(typingEl, cleanText, agentName, routes, images);
+      },
+      onError: function(errorMsg) {
+        var bubble = typingEl.querySelector('.message-bubble');
+        bubble.classList.remove('message-bubble-loading');
+        bubble.innerHTML = '<div class="message-text" style="color:#FF3B30">' + escapeHtml(errorMsg) + '</div>';
+      },
+    });
+  }
+
+  /* ---- AI 画图请求 ---- */
+
+  function sendImageRequest(prompt) {
+    // 显示用户消息
+    var userMsg = {
+      role: 'user',
+      content: '画一张：' + prompt,
+      time: new Date().toISOString(),
+    };
+    appendMessage(userMsg);
+
+    // 显示画图加载卡片
+    var wrapper = document.createElement('div');
+    wrapper.className = 'message message-xiaosong';
+    wrapper.innerHTML =
+      '<img class="message-avatar" src="assets/xiaosong-avatar.png" alt="晓松">' +
+      '<div class="message-body">' +
+      '<div class="message-bubble">' +
+      '<div class="image-gen-card" id="imageGenCard">' +
+      '<div class="image-gen-loading">' +
+      '<div class="image-gen-spinner"></div>' +
+      '<div class="image-gen-loading-text">正在为你绘制图片...</div>' +
+      '<div class="image-gen-prompt">' + escapeHtml(prompt) + '</div>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
+      '</div>';
+    chatList.appendChild(wrapper);
+    scrollToBottom();
+
+    var card = wrapper.querySelector('.image-gen-card');
+
+    // 调用 CogView 生图
+    ZhipuAPI.generateImage(prompt).then(function(url) {
+      if (url) {
+        card.innerHTML =
+          '<div class="image-gen-result">' +
+          '<img class="image-gen-img" src="' + url + '" alt="' + escapeHtml(prompt) + '">' +
+          '<div class="image-gen-actions">' +
+          '<span class="image-gen-prompt-text">' + escapeHtml(prompt) + '</span>' +
+          '<button class="image-gen-save-btn">保存图片</button>' +
+          '</div>' +
+          '</div>';
+        // 绑定保存按钮
+        var saveBtn = card.querySelector('.image-gen-save-btn');
+        saveBtn.addEventListener('click', function() {
+          downloadImage(url, prompt);
+        });
+      } else {
+        card.innerHTML = '<div class="image-gen-error">图片生成失败，请稍后重试</div>';
+      }
+    }).catch(function(err) {
+      card.innerHTML = '<div class="image-gen-error">生成失败：' + escapeHtml(err.message || '未知错误') + '</div>';
+    });
+
+    scrollToBottom();
+  }
+
+  /* ---- 下载图片 ---- */
+
+  function downloadImage(url, prompt) {
+    // 尝试用 fetch 下载为 blob
+    fetch(url).then(function(res) {
+      return res.blob();
+    }).then(function(blob) {
+      var link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'laswi_' + Date.now() + '.png';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }).catch(function() {
+      // 降级：直接在新窗口打开
+      window.open(url, '_blank');
+    });
+  }
+
+  /* ---- 语音输入 ---- */
+
+  var recognition = null;
+  var isRecording = false;
+  var voiceFinalText = '';
+  var voiceOverlay = document.getElementById('voiceOverlay');
+  var voiceStatus = document.getElementById('voiceStatus');
+  var voiceText = document.getElementById('voiceText');
+  var voiceCancelBtn = document.getElementById('voiceCancelBtn');
+  var voiceShouldCancel = false;
+
+  function initVoice() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      recognition = new SR();
+      recognition.lang = 'zh-CN';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onresult = function(e) {
+        var interim = '';
+        var final = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) {
+            final += e.results[i][0].transcript;
+          } else {
+            interim += e.results[i][0].transcript;
+          }
+        }
+        if (final) {
+          voiceFinalText += final;
+        }
+        var display = voiceFinalText + interim;
+        if (display) {
+          voiceText.textContent = display;
+          voiceStatus.textContent = '识别中...';
+        }
+      };
+
+      recognition.onerror = function(e) {
+        if (e.error === 'no-speech') {
+          voiceStatus.textContent = '没有听到声音';
+        } else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          voiceStatus.textContent = '请允许麦克风权限';
+        } else if (e.error === 'network') {
+          voiceStatus.textContent = '网络错误';
+        } else {
+          voiceStatus.textContent = '语音识别出错';
+        }
+        voiceText.textContent = '';
+        isRecording = false;
+        voiceBtn.classList.remove('recording');
+        setTimeout(function() {
+          hideVoiceOverlay();
+        }, 1200);
+      };
+
+      recognition.onend = function() {
+        isRecording = false;
+        voiceBtn.classList.remove('recording');
+        if (voiceShouldCancel) {
+          hideVoiceOverlay();
+          voiceShouldCancel = false;
+          return;
+        }
+        var result = voiceFinalText.trim();
+        if (result) {
+          hideVoiceOverlay();
+          inputField.value = result;
+          updateSendBtn();
+          autoResize();
+          inputField.focus();
+        } else {
+          voiceStatus.textContent = '没有听到声音，再试一次';
+          setTimeout(function() {
+            hideVoiceOverlay();
+          }, 1200);
+        }
+      };
+    }
+  }
+
+  function showVoiceOverlay() {
+    voiceOverlay.classList.add('show');
+    voiceStatus.textContent = '正在聆听...';
+    voiceText.textContent = '';
+    voiceFinalText = '';
+    voiceShouldCancel = false;
+  }
+
+  function hideVoiceOverlay() {
+    voiceOverlay.classList.remove('show');
+  }
+
+  function toggleVoice() {
+    if (!recognition) {
+      voiceStatus.textContent = '当前浏览器不支持语音输入';
+      showVoiceOverlay();
+      setTimeout(function() {
+        hideVoiceOverlay();
+      }, 2000);
+      return;
+    }
+    if (isRecording) {
+      voiceShouldCancel = true;
+      recognition.stop();
+    } else {
+      try {
+        recognition.start();
+        isRecording = true;
+        voiceBtn.classList.add('recording');
+        showVoiceOverlay();
+      } catch (err) {
+        isRecording = false;
+        voiceBtn.classList.remove('recording');
+        voiceStatus.textContent = '启动失败，请重试';
+        showVoiceOverlay();
+        setTimeout(function() {
+          hideVoiceOverlay();
+        }, 1500);
+      }
+    }
+  }
+
+  /* ---- 工具函数 ---- */
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function renderText(text) {
+    if (!text) return '';
+    var html = escapeHtml(text);
+    html = html.replace(/```([\s\S]*?)```/g, function(m, p1) {
+      return '<pre>' + p1 + '</pre>';
+    });
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  }
+
+  function updateSendBtn() {
+    sendBtn.disabled = inputField.value.trim() === '';
+  }
+
+  function autoResize() {
+    inputField.style.height = 'auto';
+    inputField.style.height = Math.min(inputField.scrollHeight, 100) + 'px';
+  }
+
+  function scrollToBottom() {
+    requestAnimationFrame(function() {
+      chatContent.scrollTop = chatContent.scrollHeight;
+    });
+  }
+
+  /* ---- 事件 ---- */
+
+  function bindEvents() {
+    welcomeBtn.addEventListener('click', hideWelcome);
+
+    inputField.addEventListener('input', function() {
+      updateSendBtn();
+      autoResize();
+    });
+
+    inputField.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+    voiceBtn.addEventListener('click', toggleVoice);
+    imageBtn.addEventListener('click', toggleImageMode);
+    imageModeExit.addEventListener('click', exitImageMode);
+    voiceCancelBtn.addEventListener('click', function() {
+      voiceShouldCancel = true;
+      if (recognition && isRecording) {
+        recognition.stop();
+      } else {
+        hideVoiceOverlay();
+      }
+    });
+
+    historyBtn.addEventListener('click', function() {
+      if (confirm('确定清空所有对话记录吗？')) {
+        Xiaosong.clearHistory();
+        chatList.innerHTML = '';
+        addGreeting();
+      }
+    });
+
+    initVoice();
+  }
+
+  /* ---- 启动 ---- */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+<style>
+/* 画图按钮 */
+.input-image-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+.input-image-btn svg {
+  width: 22px;
+  height: 22px;
+  transition: stroke 0.2s;
+}
+.input-image-btn:active {
+  transform: scale(0.9);
+}
+
+/* 画图模式激活态 */
+.input-bar.image-mode .input-image-btn svg {
+  stroke: #AF52DE;
+}
+.input-bar.image-mode .input-inner {
+  border-color: rgba(175, 82, 222, 0.3);
+}
+
+/* 画图模式指示条 */
+.image-mode-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px;
+  background: rgba(175, 82, 222, 0.08);
+  border-bottom: 0.5px solid rgba(175, 82, 222, 0.15);
+}
+.image-mode-bar.active {
+  display: flex;
+}
+.image-mode-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #AF52DE;
+}
+.image-mode-exit {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: #86868B;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+.image-mode-exit:active {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* AI 生图卡片 */
+.image-gen-card {
+  width: 100%;
+  margin-top: 6px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* 加载状态 */
+.image-gen-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 16px;
+  background: rgba(175, 82, 222, 0.06);
+  border-radius: 12px;
+}
+.image-gen-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(175, 82, 222, 0.2);
+  border-top-color: #AF52DE;
+  border-radius: 50%;
+  animation: image-gen-spin 0.8s linear infinite;
+}
+@keyframes image-gen-spin {
+  to { transform: rotate(360deg); }
+}
+.image-gen-loading-text {
+  font-size: 14px;
+  color: #AF52DE;
+  font-weight: 600;
+}
+.image-gen-prompt {
+  font-size: 12px;
+  color: #86868B;
+  max-width: 240px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 生成结果 */
+.image-gen-result {
+  border-radius: 12px;
+  overflow: hidden;
+}
+.image-gen-img {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+}
+.image-gen-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 4px 2px;
+}
+.image-gen-prompt-text {
+  font-size: 12px;
+  color: #86868B;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.image-gen-save-btn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border: 0.5px solid rgba(175, 82, 222, 0.3);
+  border-radius: 999px;
+  background: rgba(175, 82, 222, 0.08);
+  font-size: 12px;
+  color: #AF52DE;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.image-gen-save-btn:active {
+  transform: scale(0.94);
+  background: rgba(175, 82, 222, 0.15);
+}
+
+/* 错误状态 */
+.image-gen-error {
+  padding: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #FF3B30;
+  background: rgba(255, 59, 48, 0.06);
+  border-radius: 12px;
+}
+</style>
+</body>
+</html>

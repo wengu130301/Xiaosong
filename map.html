@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>地图导航 - 我是晓松</title>
+<link rel="stylesheet" href="css/common.css">
+<style>
+  #mapContainer {
+    flex: 1; width: 100%; position: relative; overflow: hidden;
+  }
+  #amapDiv {
+    width: 100%; height: 100%; min-height: 400px;
+  }
+
+  .map-search-bar {
+    position: absolute; top: 12px; left: 16px; right: 16px;
+    z-index: 100;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--glass-bg-heavy); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 20px; padding: 10px 14px;
+    box-shadow: var(--shadow-md);
+  }
+  .map-search-bar svg { width: 18px; height: 18px; color: var(--text-3); flex-shrink: 0; }
+  .map-search-bar input {
+    flex: 1; border: none; outline: none; background: transparent;
+    font-size: 15px; color: var(--text-1); font-family: inherit;
+  }
+  .map-search-bar input::placeholder { color: var(--text-3); }
+  .map-search-btn {
+    background: var(--accent); color: #fff; border: none;
+    padding: 6px 14px; border-radius: 100px; font-size: 13px;
+    font-weight: 600; cursor: pointer;
+  }
+
+  .map-results {
+    position: absolute; top: 60px; left: 16px; right: 16px;
+    z-index: 99; max-height: 300px; overflow-y: auto;
+    background: var(--glass-bg-heavy); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 20px; box-shadow: var(--shadow-md);
+    display: none;
+  }
+  .map-results.show { display: block; }
+  .map-result-item {
+    padding: 12px 14px; border-bottom: 0.5px solid var(--separator);
+    cursor: pointer; transition: background 0.15s;
+  }
+  .map-result-item:active { background: rgba(0,0,0,0.04); }
+  .map-result-item:last-child { border-bottom: none; }
+  .map-result-name { font-size: 15px; font-weight: 500; color: var(--text-1); margin-bottom: 2px; }
+  .map-result-addr { font-size: 12px; color: var(--text-3); }
+
+  .map-controls {
+    position: absolute; right: 16px; bottom: 100px;
+    z-index: 100; display: flex; flex-direction: column; gap: 8px;
+  }
+  .map-ctrl-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--glass-bg-heavy); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255,255,255,0.6);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform 0.15s;
+    box-shadow: var(--shadow-md);
+  }
+  .map-ctrl-btn:active { transform: scale(0.9); }
+  .map-ctrl-btn svg { width: 20px; height: 20px; color: var(--accent); }
+
+  .map-info-card {
+    position: absolute; bottom: 80px; left: 16px; right: 16px;
+    z-index: 100;
+    background: var(--glass-bg-heavy); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 20px; padding: 14px 16px;
+    box-shadow: var(--shadow-md); display: none;
+  }
+  .map-info-card.show { display: block; }
+  .map-info-name { font-size: 16px; font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+  .map-info-addr { font-size: 13px; color: var(--text-2); margin-bottom: 8px; }
+  .map-info-actions { display: flex; gap: 8px; }
+  .map-info-btn {
+    flex: 1; padding: 8px; border: none; border-radius: 12px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .map-info-btn:active { transform: scale(0.95); }
+  .map-info-btn.primary { background: var(--accent); color: #fff; }
+  .map-info-btn.secondary { background: var(--glass-bg-light); color: var(--text-1); border: 1px solid rgba(255,255,255,0.5); }
+
+  .map-tab-bar {
+    display: flex; gap: 0; padding: 0 16px;
+    background: var(--glass-bg-heavy); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-bottom: 1px solid rgba(255,255,255,0.4);
+  }
+  .map-tab {
+    flex: 1; padding: 10px; text-align: center;
+    font-size: 13px; color: var(--text-2); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.2s;
+  }
+  .map-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- 顶部栏 -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="header-back-btn" onclick="App.back()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+      </div>
+      <div class="header-title">地图导航</div>
+      <div class="header-right"></div>
+    </div>
+  </header>
+
+  <!-- 地图容器 -->
+  <div id="mapContainer">
+    <div id="amapDiv"></div>
+
+    <!-- 搜索栏 -->
+    <div class="map-search-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="mapSearchInput" placeholder="搜索地点、公交、地铁">
+      <button class="map-search-btn" onclick="searchMap()">搜索</button>
+    </div>
+
+    <!-- 搜索结果 -->
+    <div class="map-results" id="mapResults"></div>
+
+    <!-- 地图控件 -->
+    <div class="map-controls">
+      <button class="map-ctrl-btn" onclick="locateMe()" title="定位">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      </button>
+      <button class="map-ctrl-btn" onclick="zoomIn()" title="放大">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <button class="map-ctrl-btn" onclick="zoomOut()" title="缩小">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+
+    <!-- 地点信息卡片 -->
+    <div class="map-info-card" id="mapInfoCard">
+      <div class="map-info-name" id="infoName"></div>
+      <div class="map-info-addr" id="infoAddr"></div>
+      <div class="map-info-actions">
+        <button class="map-info-btn primary" onclick="navigateTo()">到这去</button>
+        <button class="map-info-btn secondary" onclick="closeInfoCard()">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 高德地图安全密钥配置
+window._AMapSecurityConfig = {
+  securityJsCode: '3067b24d0317fabd8a429769df429a50'
+};
+</script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=3378d3807ff6589c0bc6d64e5b230a6b&plugin=AMap.Geocoder,AMap.PlaceSearch,AMap.Geolocation,AMap.AutoComplete"></script>
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script>
+App.init('discover');
+
+var map = null;
+var marker = null;
+var geocoder = null;
+var placeSearch = null;
+var autoComplete = null;
+var currentLocation = null;
+var selectedPOI = null;
+
+function initMap() {
+  map = new AMap.Map('amapDiv', {
+    zoom: 13,
+    center: [116.397428, 39.90923], // 默认北京
+    mapStyle: 'amap://styles/light',
+    resizeEnable: true,
+  });
+
+  geocoder = new AMap.Geocoder();
+  placeSearch = new AMap.PlaceSearch({
+    city: '',
+    pageSize: 15,
+    pageIndex: 1,
+  });
+  autoComplete = new AMap.AutoComplete({ city: '' });
+
+  // 点击地图获取地址
+  map.on('click', function(e) {
+    var lnglat = e.lnglat;
+    geocoder.getAddress(lnglat, function(status, result) {
+      if (status === 'complete' && result.info === 'OK') {
+        var addr = result.regeocode.formattedAddress;
+        showInfoCard('选中位置', addr, lnglat);
+        if (marker) map.remove(marker);
+        marker = new AMap.Marker({ position: lnglat });
+        map.add(marker);
+      }
+    });
+  });
+
+  // 自动定位
+  locateMe();
+}
+
+function searchMap() {
+  var keyword = document.getElementById('mapSearchInput').value.trim();
+  if (!keyword) return;
+
+  placeSearch.search(keyword, function(status, result) {
+    if (status === 'complete' && result.poiList) {
+      var pois = result.poiList.pois;
+      var html = '';
+      pois.forEach(function(poi, i) {
+        html += '<div class="map-result-item" onclick="selectPOI(' + i + ')">' +
+          '<div class="map-result-name">' + poi.name + '</div>' +
+          '<div class="map-result-addr">' + (poi.address || poi.district || '') + '</div>' +
+        '</div>';
+      });
+      document.getElementById('mapResults').innerHTML = html;
+      document.getElementById('mapResults').classList.add('show');
+
+      // 存储pois供点击使用
+      window._searchResults = pois;
+
+      // 在地图上标记第一个
+      if (pois.length > 0) {
+        selectPOI(0);
+      }
+    } else {
+      document.getElementById('mapResults').innerHTML = '<div class="map-result-item"><div class="map-result-name">未找到结果</div></div>';
+      document.getElementById('mapResults').classList.add('show');
+    }
+  });
+}
+
+function selectPOI(index) {
+  var pois = window._searchResults;
+  if (!pois || !pois[index]) return;
+  var poi = pois[index];
+  selectedPOI = poi;
+
+  var lnglat = new AMap.LngLat(poi.location.lng, poi.location.lat);
+  map.setCenter(lnglat);
+  map.setZoom(16);
+
+  if (marker) map.remove(marker);
+  marker = new AMap.Marker({ position: lnglat });
+  map.add(marker);
+
+  showInfoCard(poi.name, poi.address || poi.district || '', lnglat);
+  document.getElementById('mapResults').classList.remove('show');
+}
+
+function showInfoCard(name, addr, lnglat) {
+  document.getElementById('infoName').textContent = name;
+  document.getElementById('infoAddr').textContent = addr;
+  document.getElementById('mapInfoCard').classList.add('show');
+  window._selectedLnglat = lnglat;
+}
+
+function closeInfoCard() {
+  document.getElementById('mapInfoCard').classList.remove('show');
+}
+
+function navigateTo() {
+  if (!window._selectedLnglat) return;
+  var lng = window._selectedLnglat.getLng();
+  var lat = window._selectedLnglat.getLat();
+  // 打开高德导航
+  window.open('https://uri.amap.com/navigation?to=' + lng + ',' + lat + ',' + encodeURIComponent(document.getElementById('infoName').textContent) + '&mode=car&coordinate=wgs84');
+}
+
+function locateMe() {
+  var geolocation = new AMap.Geolocation({
+    enableHighAccuracy: true,
+    timeout: 10000,
+  });
+  geolocation.getCurrentPosition(function(status, result) {
+    if (status === 'complete') {
+      var lnglat = new AMap.LngLat(result.position.lng, result.position.lat);
+      currentLocation = lnglat;
+      map.setCenter(lnglat);
+      if (marker) map.remove(marker);
+      marker = new AMap.Marker({
+        position: lnglat,
+        icon: new AMap.Icon({
+          size: new AMap.Size(28, 28),
+          image: 'https://webapi.amap.com/theme/v1.3/markers/n/loc.png',
+          imageSize: new AMap.Size(28, 28),
+        }),
+      });
+      map.add(marker);
+
+      // 逆地理编码获取当前地址
+      geocoder.getAddress(lnglat, function(status, result) {
+        if (status === 'complete' && result.info === 'OK') {
+          showInfoCard('我的位置', result.regeocode.formattedAddress, lnglat);
+        }
+      });
+    }
+  });
+}
+
+function zoomIn() { map.zoomIn(); }
+function zoomOut() { map.zoomOut(); }
+
+// 搜索输入实时联想
+document.getElementById('mapSearchInput').addEventListener('input', function() {
+  var keyword = this.value.trim();
+  if (!keyword || keyword.length < 2) {
+    document.getElementById('mapResults').classList.remove('show');
+    return;
+  }
+  autoComplete.search(keyword, function(status, result) {
+    if (status === 'complete' && result.tips) {
+      var html = '';
+      var tips = result.tips.filter(function(t) { return t.location; }).slice(0, 10);
+      tips.forEach(function(tip, i) {
+        html += '<div class="map-result-item" onclick="selectTip(' + i + ')">' +
+          '<div class="map-result-name">' + tip.name + '</div>' +
+          '<div class="map-result-addr">' + (tip.district || '') + '</div>' +
+        '</div>';
+      });
+      if (html) {
+        document.getElementById('mapResults').innerHTML = html;
+        document.getElementById('mapResults').classList.add('show');
+        window._autoTips = tips;
+      }
+    }
+  });
+});
+
+function selectTip(index) {
+  var tips = window._autoTips;
+  if (!tips || !tips[index]) return;
+  var tip = tips[index];
+  var lnglat = new AMap.LngLat(tip.location.lng, tip.location.lat);
+  map.setCenter(lnglat);
+  map.setZoom(16);
+  if (marker) map.remove(marker);
+  marker = new AMap.Marker({ position: lnglat });
+  map.add(marker);
+  showInfoCard(tip.name, tip.district || '', lnglat);
+  document.getElementById('mapResults').classList.remove('show');
+  document.getElementById('mapSearchInput').value = tip.name;
+}
+
+document.getElementById('mapSearchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') searchMap();
+});
+
+// 初始化地图
+if (typeof AMap !== 'undefined') {
+  initMap();
+} else {
+  // 等待高德SDK加载
+  var checkAMap = setInterval(function() {
+    if (typeof AMap !== 'undefined') {
+      clearInterval(checkAMap);
+      initMap();
+    }
+  }, 200);
+}
+</script>
+</body>
+</html>

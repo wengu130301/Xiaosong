@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>计算器 - 我是晓松</title>
+<link rel="stylesheet" href="css/common.css">
+<style>
+  .calc-display {
+    background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 24px; padding: 24px 20px; margin: 12px 16px;
+    min-height: 140px; display: flex; flex-direction: column;
+    justify-content: flex-end;
+  }
+  .calc-history {
+    font-size: 14px; color: var(--text-3); text-align: right;
+    min-height: 20px; margin-bottom: 8px;
+    overflow-x: auto; white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .calc-history::-webkit-scrollbar { display: none; }
+  .calc-expression {
+    font-size: 26px; font-weight: 300; color: var(--text-2);
+    text-align: right; min-height: 36px;
+    overflow-x: auto; white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .calc-expression::-webkit-scrollbar { display: none; }
+  .calc-result {
+    font-size: 48px; font-weight: 200; color: var(--text-primary);
+    text-align: right; margin-top: 8px;
+    overflow-x: auto; white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .calc-result::-webkit-scrollbar { display: none; }
+  .calc-result.error { font-size: 20px; color: #FF3B30; font-weight: 500; }
+
+  .calc-mode-bar {
+    display: flex; gap: 0; margin: 0 16px 8px;
+    background: var(--glass-bg); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 16px; padding: 4px;
+  }
+  .calc-mode {
+    flex: 1; padding: 8px; text-align: center;
+    font-size: 13px; color: var(--text-2); cursor: pointer;
+    border-radius: 12px; transition: all 0.2s; font-weight: 500;
+  }
+  .calc-mode.active { background: var(--accent); color: #fff; }
+
+  .calc-keypad {
+    flex: 1; display: flex; flex-direction: column; gap: 8px;
+    padding: 0 16px 16px;
+  }
+  .calc-row {
+    display: flex; gap: 8px; flex: 1;
+  }
+  .calc-key {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 500; cursor: pointer;
+    border: none; border-radius: 18px;
+    transition: all 0.12s; font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .calc-key:active { transform: scale(0.92); }
+
+  .calc-key.num {
+    background: var(--glass-bg-heavy); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.6);
+    color: var(--text-primary);
+  }
+  .calc-key.op {
+    background: var(--glass-bg); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.6);
+    color: var(--accent); font-weight: 600;
+  }
+  .calc-key.func {
+    background: var(--glass-bg-light); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: var(--text-2); font-size: 16px;
+  }
+  .calc-key.eq {
+    background: var(--accent-gradient); color: #fff; font-weight: 700;
+  }
+  .calc-key.zero { flex: 2; }
+
+  .calc-sci-panel {
+    display: none; flex-direction: column; gap: 8px;
+    margin: 0 16px 8px;
+  }
+  .calc-sci-panel.show { display: flex; }
+  .calc-sci-panel .calc-row { flex: 0 0 auto; height: 52px; }
+  .calc-sci-panel .calc-key { font-size: 15px; }
+
+  .calc-const-panel {
+    display: none; flex-direction: column; gap: 8px;
+    margin: 0 16px 8px;
+  }
+  .calc-const-panel.show { display: flex; }
+  .calc-const-panel .calc-row { flex: 0 0 auto; height: 52px; }
+  .calc-const-panel .calc-key { font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- 顶部栏 -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="header-back-btn" onclick="App.back()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+      </div>
+      <div class="header-title">计算器</div>
+      <div class="header-right"></div>
+    </div>
+  </header>
+
+  <!-- 内容区 -->
+  <div class="content">
+    <div class="content-inner" style="max-width: 480px;">
+      <!-- 显示区 -->
+      <div class="calc-display">
+        <div class="calc-history" id="calcHistory"></div>
+        <div class="calc-expression" id="calcExpr">0</div>
+        <div class="calc-result" id="calcResult"></div>
+      </div>
+
+      <!-- 模式切换 -->
+      <div class="calc-mode-bar">
+        <div class="calc-mode active" onclick="setMode('basic')">基础</div>
+        <div class="calc-mode" onclick="setMode('scientific')">科学</div>
+        <div class="calc-mode" onclick="setMode('converter')">换算</div>
+      </div>
+
+      <!-- 科学函数面板 -->
+      <div class="calc-sci-panel" id="sciPanel">
+        <div class="calc-row">
+          <button class="calc-key func" onclick="sciFunc('sin')">sin</button>
+          <button class="calc-key func" onclick="sciFunc('cos')">cos</button>
+          <button class="calc-key func" onclick="sciFunc('tan')">tan</button>
+          <button class="calc-key func" onclick="sciFunc('log')">log</button>
+          <button class="calc-key func" onclick="sciFunc('ln')">ln</button>
+        </div>
+        <div class="calc-row">
+          <button class="calc-key func" onclick="insertText('Math.PI')">PI</button>
+          <button class="calc-key func" onclick="insertText('Math.E')">e</button>
+          <button class="calc-key func" onclick="insertPow()">x^y</button>
+          <button class="calc-key func" onclick="insertText('Math.sqrt(')">sqrt</button>
+          <button class="calc-key func" onclick="insertText('!')">n!</button>
+        </div>
+      </div>
+
+      <!-- 换算面板 -->
+      <div class="calc-const-panel" id="convPanel">
+        <div class="calc-row">
+          <button class="calc-key func" onclick="convert('length')">长度</button>
+          <button class="calc-key func" onclick="convert('weight')">重量</button>
+          <button class="calc-key func" onclick="convert('temp')">温度</button>
+          <button class="calc-key func" onclick="convert('area')">面积</button>
+        </div>
+        <div class="calc-row">
+          <button class="calc-key func" onclick="convert('speed')">速度</button>
+          <button class="calc-key func" onclick="convert('data')">数据</button>
+          <button class="calc-key func" onclick="convert('time')">时间</button>
+          <button class="calc-key func" onclick="convert('volume')">体积</button>
+        </div>
+      </div>
+
+      <!-- 数字键盘 -->
+      <div class="calc-keypad">
+        <div class="calc-row">
+          <button class="calc-key func" onclick="clearAll()">AC</button>
+          <button class="calc-key func" onclick="deleteOne()">DEL</button>
+          <button class="calc-key func" onclick="insertText('%')">%</button>
+          <button class="calc-key op" onclick="insertOp('/')">&divide;</button>
+        </div>
+        <div class="calc-row">
+          <button class="calc-key num" onclick="insertNum('7')">7</button>
+          <button class="calc-key num" onclick="insertNum('8')">8</button>
+          <button class="calc-key num" onclick="insertNum('9')">9</button>
+          <button class="calc-key op" onclick="insertOp('*')">&times;</button>
+        </div>
+        <div class="calc-row">
+          <button class="calc-key num" onclick="insertNum('4')">4</button>
+          <button class="calc-key num" onclick="insertNum('5')">5</button>
+          <button class="calc-key num" onclick="insertNum('6')">6</button>
+          <button class="calc-key op" onclick="insertOp('-')">&minus;</button>
+        </div>
+        <div class="calc-row">
+          <button class="calc-key num" onclick="insertNum('1')">1</button>
+          <button class="calc-key num" onclick="insertNum('2')">2</button>
+          <button class="calc-key num" onclick="insertNum('3')">3</button>
+          <button class="calc-key op" onclick="insertOp('+')">+</button>
+        </div>
+        <div class="calc-row">
+          <button class="calc-key num zero" onclick="insertNum('0')">0</button>
+          <button class="calc-key num" onclick="insertDot()">.</button>
+          <button class="calc-key eq" onclick="calculate()">=</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script>
+App.init('discover');
+
+var expression = '';
+var history = '';
+
+function updateDisplay() {
+  var exprEl = document.getElementById('calcExpr');
+  var histEl = document.getElementById('calcHistory');
+  var dispExpr = expression || '0';
+  // 显示转换
+  dispExpr = dispExpr.replace(/\*/g, ' x ').replace(/\//g, ' / ').replace(/\+/g, ' + ').replace(/-/g, ' - ');
+  exprEl.textContent = dispExpr;
+  histEl.textContent = history;
+
+  // 实时计算预览
+  try {
+    if (expression) {
+      var result = evalExpr(expression);
+      if (result !== null && !isNaN(result)) {
+        var resEl = document.getElementById('calcResult');
+        resEl.textContent = formatResult(result);
+        resEl.classList.remove('error');
+      }
+    }
+  } catch(e) {}
+}
+
+function evalExpr(expr) {
+  // 替换特殊符号
+  var safeExpr = expr
+    .replace(/x\^y/g, 'Math.pow')
+    .replace(/%/g, '/100');
+
+  // 处理阶乘
+  safeExpr = safeExpr.replace(/(\d+)!/g, function(match, num) {
+    var n = parseInt(num);
+    var result = 1;
+    for (var i = 2; i <= n; i++) result *= i;
+    return result;
+  });
+
+  try {
+    var result = Function('"use strict"; return (' + safeExpr + ')')();
+    return result;
+  } catch(e) {
+    return null;
+  }
+}
+
+function formatResult(result) {
+  if (typeof result !== 'number') return String(result);
+  if (Math.abs(result) < 1e-10) return '0';
+  if (Math.abs(result) > 1e15) return result.toExponential(6);
+  // 限制小数位
+  var str = result.toString();
+  if (str.indexOf('.') >= 0 && str.length > 15) {
+    return result.toPrecision(10).replace(/\.?0+$/, '');
+  }
+  return str;
+}
+
+function insertNum(num) {
+  expression += num;
+  updateDisplay();
+}
+
+function insertDot() {
+  // 防止重复小数点
+  var lastNum = expression.split(/[-+*/]/).pop();
+  if (lastNum.indexOf('.') < 0) {
+    expression += (lastNum === '' ? '0.' : '.');
+    updateDisplay();
+  }
+}
+
+function insertOp(op) {
+  if (expression === '' && op !== '-') return;
+  // 替换连续运算符
+  var lastChar = expression.slice(-1);
+  if ('+-*/'.indexOf(lastChar) >= 0) {
+    expression = expression.slice(0, -1);
+  }
+  expression += op;
+  updateDisplay();
+}
+
+function insertText(text) {
+  expression += text;
+  updateDisplay();
+}
+
+function insertPow() {
+  expression += '**';
+  updateDisplay();
+}
+
+function sciFunc(func) {
+  expression += 'Math.' + func + '(';
+  updateDisplay();
+}
+
+function deleteOne() {
+  expression = expression.slice(0, -1);
+  updateDisplay();
+}
+
+function clearAll() {
+  expression = '';
+  history = '';
+  document.getElementById('calcResult').textContent = '';
+  document.getElementById('calcResult').classList.remove('error');
+  updateDisplay();
+}
+
+function calculate() {
+  if (!expression) return;
+  var result = evalExpr(expression);
+  var resEl = document.getElementById('calcResult');
+  if (result === null || isNaN(result)) {
+    resEl.textContent = '表达式错误';
+    resEl.classList.add('error');
+  } else {
+    history = expression + ' =';
+    expression = formatResult(result);
+    resEl.textContent = expression;
+    resEl.classList.remove('error');
+    document.getElementById('calcExpr').textContent = history;
+  }
+}
+
+var currentMode = 'basic';
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.calc-mode').forEach(function(m) { m.classList.remove('active'); });
+  event.target.classList.add('active');
+
+  document.getElementById('sciPanel').classList.remove('show');
+  document.getElementById('convPanel').classList.remove('show');
+
+  if (mode === 'scientific') {
+    document.getElementById('sciPanel').classList.add('show');
+  } else if (mode === 'converter') {
+    document.getElementById('convPanel').classList.add('show');
+  }
+}
+
+// 单位换算
+function convert(type) {
+  var units = {
+    length: { name: '长度', base: 'm', items: [['km', 1000], ['m', 1], ['cm', 0.01], ['mm', 0.001], ['mi', 1609.34], ['ft', 0.3048]] },
+    weight: { name: '重量', base: 'kg', items: [['t', 1000], ['kg', 1], ['g', 0.001], ['lb', 0.4536], ['oz', 0.0283]] },
+    temp: { name: '温度', base: 'C', items: [['C', 'C'], ['F', 'F'], ['K', 'K']] },
+    area: { name: '面积', base: 'm2', items: [['km2', 1000000], ['m2', 1], ['cm2', 0.0001], ['acre', 4046.86], ['ft2', 0.0929]] },
+    speed: { name: '速度', base: 'm/s', items: [['m/s', 1], ['km/h', 0.2778], ['mph', 0.447], ['knot', 0.514]] },
+    data: { name: '数据', base: 'B', items: [['B', 1], ['KB', 1024], ['MB', 1048576], ['GB', 1073741824], ['TB', 1099511627776]] },
+    time: { name: '时间', base: 's', items: [['s', 1], ['min', 60], ['h', 3600], ['day', 86400], ['week', 604800]] },
+    volume: { name: '体积', base: 'L', items: [['L', 1], ['mL', 0.001], ['m3', 1000], ['gal', 3.785], ['pt', 0.473]] },
+  };
+
+  var unit = units[type];
+  if (!unit) return;
+
+  var value = parseFloat(expression);
+  if (isNaN(value)) value = 1;
+
+  var results = [];
+  if (type === 'temp') {
+    var celsius;
+    if (expression.indexOf('C') >= 0 || true) {
+      // 从摄氏开始
+      celsius = value;
+    }
+    results.push(value + ' C = ' + (value * 9/5 + 32).toFixed(2) + ' F');
+    results.push(value + ' C = ' + (value + 273.15).toFixed(2) + ' K');
+    results.push(value + ' F = ' + ((value - 32) * 5/9).toFixed(2) + ' C');
+  } else {
+    unit.items.forEach(function(item) {
+      if (item[0] !== unit.base) {
+        var converted = value * item[1];
+        results.push(value + ' ' + unit.base + ' = ' + converted.toFixed(4) + ' ' + item[0]);
+      }
+    });
+  }
+
+  var resEl = document.getElementById('calcResult');
+  resEl.innerHTML = results.join('<br>').replace(/(\d+\.?\d*)/g, function(m) {
+    return '<span style="font-size:14px">' + m + '</span>';
+  });
+  resEl.style.fontSize = '16px';
+  setTimeout(function() { resEl.style.fontSize = '48px'; }, 3000);
+}
+
+// 键盘支持
+document.addEventListener('keydown', function(e) {
+  if (e.key >= '0' && e.key <= '9') insertNum(e.key);
+  else if (e.key === '.') insertDot();
+  else if (e.key === '+') insertOp('+');
+  else if (e.key === '-') insertOp('-');
+  else if (e.key === '*') insertOp('*');
+  else if (e.key === '/') { e.preventDefault(); insertOp('/'); }
+  else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); calculate(); }
+  else if (e.key === 'Backspace') deleteOne();
+  else if (e.key === 'Escape') clearAll();
+});
+</script>
+</body>
+</html>

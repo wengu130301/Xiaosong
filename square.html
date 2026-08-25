@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>广场 - 我是晓松</title>
+<link rel="stylesheet" href="css/common.css">
+<style>
+  .square-coming {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+  }
+  .square-avatar-wrap {
+    position: relative;
+    margin-bottom: 28px;
+  }
+  .square-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 36px;
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+    border: 3px solid rgba(255, 255, 255, 0.7);
+  }
+  .square-avatar-glow {
+    position: absolute;
+    inset: -8px;
+    border-radius: 44px;
+    background: var(--xiaosong-gradient);
+    opacity: 0.15;
+    filter: blur(20px);
+    z-index: -1;
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.15; transform: scale(1); }
+    50% { opacity: 0.25; transform: scale(1.05); }
+  }
+  .square-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+  .square-message {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    max-width: 320px;
+    margin-bottom: 32px;
+  }
+  .square-message strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .square-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 100px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .square-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #FF9500;
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .square-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 32px;
+    max-width: 360px;
+  }
+  .square-feature-tag {
+    background: var(--glass-bg-light);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 100px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- 顶部栏 -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left"></div>
+      <h1 class="header-title">广场</h1>
+      <div class="header-right"></div>
+    </div>
+  </header>
+
+  <!-- 内容区 -->
+  <div class="content">
+    <div class="content-inner">
+      <div class="square-coming">
+        <div class="square-avatar-wrap">
+          <div class="square-avatar-glow"></div>
+          <img class="square-avatar" src="assets/xiaosong-avatar.png" alt="晓松">
+        </div>
+
+        <div class="square-title">广场正在建设中</div>
+
+        <div class="square-message">
+          嘿，我是晓松。<br>
+          广场是我正在用心打造的地方，<br>
+          以后这里会有<strong>智能体广场</strong>、<strong>创意分享</strong>和<strong>社区互动</strong>。<br>
+          现在还差一点，等我把砖码好了就叫你来玩。
+        </div>
+
+        <div class="square-status">
+          <span class="square-status-dot"></span>
+          开发中，敬请期待
+        </div>
+
+        <div class="square-features">
+          <div class="square-feature-tag">智能体广场</div>
+          <div class="square-feature-tag">创意分享</div>
+          <div class="square-feature-tag">社区互动</div>
+          <div class="square-feature-tag">创建你的AI</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部 Tab -->
+  <nav class="tab-bar" id="tabBar"></nav>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script>
+App.init('square');
+</script>
+</body>
+</html>
