@@ -1,26 +1,26 @@
 const API_CONFIG = {
-  // 智谱 AI（GLM 对话 + CogView 生图）
+  // 智谱 AI（GLM 对话 + CogView 生图）Render代理路径
   zhipu: {
     apiKey: import.meta.env.VITE_ZHIPU_API_KEY,
-    chatUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-    imageUrl: 'https://open.bigmodel.cn/api/paas/v4/images/generations',
+    chatUrl: '/api/zhipu/chat/completions',
+    imageUrl: '/api/zhipu/images/generations',
     model: 'glm-4-flash',
     imageModel: 'cogview-3-flash',
   },
 
-  // 高德地图（JS API + Web 服务）
+  // 高德地图 Render代理路径
   amap: {
     jsKey: import.meta.env.VITE_AMAP_JS_KEY,
     securityCode: import.meta.env.VITE_AMAP_SECURITY_CODE,
     webKey: import.meta.env.VITE_AMAP_WEB_KEY,
-    weatherUrl: 'https://restapi.amap.com/v3/weather/weatherInfo',
-    geocodeUrl: 'https://restapi.amap.com/v3/geocode/geo',
-    regeoUrl: 'https://restapi.amap.com/v3/geocode/regeo',
-    poiUrl: 'https://restapi.amap.com/v3/place/text',
-    aroundUrl: 'https://restapi.amap.com/v3/place/around',
+    weatherUrl: '/api/amap/weather/weatherInfo',
+    geocodeUrl: '/api/amap/geocode/geo',
+    regeoUrl: '/api/amap/geocode/regeo',
+    poiUrl: '/api/amap/place/text',
+    aroundUrl: '/api/amap/place/around',
   },
 
-  // Supabase（用户系统 + 智能体存储）
+  // Supabase 无需代理，保持原地址
   supabase: {
     url: import.meta.env.VITE_SUPABASE_URL,
     anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -30,10 +30,8 @@ const API_CONFIG = {
 /* ========================================
    智谱 AI 对话接口
    策略：先尝试流式，失败则自动降级为非流式
-   注意：浏览器中可能遇到 CORS 限制
-   HBuilder X 打包后 WebView 不受 CORS 限制，可正常使用
+   Render代理环境下流式SSE完全兼容
    ======================================== */
-
 const ZhipuAPI = {
   // 超时时间（毫秒）
   TIMEOUT: 60000,
@@ -57,11 +55,9 @@ const ZhipuAPI = {
    */
   async chat(messages, onChunk, options = {}) {
     try {
-      // 先尝试流式
       return await this._chatStream(messages, onChunk, options);
     } catch (streamError) {
       console.warn('[ZhipuAPI] Stream failed, falling back to sync:', streamError.message);
-      // 流式失败，降级为非流式
       try {
         const text = await this.chatSync(messages, options);
         if (onChunk) onChunk(text, text);
@@ -100,7 +96,6 @@ const ZhipuAPI = {
     }
 
     if (!response.body) {
-      // 没有 body（某些环境不支持 ReadableStream），降级为非流式
       throw new Error('No response body, need sync fallback');
     }
 
@@ -121,7 +116,6 @@ const ZhipuAPI = {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
-        // 兼容不同 SSE 格式
         const data = trimmed.startsWith('data:') ? trimmed.slice(5).trim() : trimmed;
         if (!data || data === '[DONE]') continue;
 
@@ -134,15 +128,11 @@ const ZhipuAPI = {
             fullText += content;
             if (onChunk) onChunk(content, fullText);
           }
-        } catch (e) {
-          // 跳过非 JSON 行
-        }
+        } catch (e) {}
       }
     }
 
-    if (!fullText) {
-      throw new Error('Empty response from stream');
-    }
+    if (!fullText) throw new Error('Empty response from stream');
     return fullText;
   },
 
@@ -174,9 +164,7 @@ const ZhipuAPI = {
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
-    if (!content) {
-      throw new Error('Empty response: ' + JSON.stringify(data).slice(0, 300));
-    }
+    if (!content) throw new Error('Empty response: ' + JSON.stringify(data).slice(0, 300));
     return content;
   },
 
@@ -202,10 +190,7 @@ const ZhipuAPI = {
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) {
-        throw new Error('API ' + response.status);
-      }
-
+      if (!response.ok) throw new Error('API ' + response.status);
       const data = await response.json();
       return data.data?.[0]?.url || '';
     } catch (error) {
@@ -218,7 +203,6 @@ const ZhipuAPI = {
 /* ========================================
    高德地图/天气接口
    ======================================== */
-
 const AmapAPI = {
   /**
    * 查询天气
@@ -233,9 +217,7 @@ const AmapAPI = {
     try {
       const response = await fetch(url);
       const data = await response.json();
-      if (data.status !== '1') {
-        throw new Error(data.info || 'weather query failed');
-      }
+      if (data.status !== '1') throw new Error(data.info || 'weather query failed');
       return data;
     } catch (error) {
       console.error('[AmapAPI] getWeather error:', error);
@@ -253,9 +235,7 @@ const AmapAPI = {
     try {
       const response = await fetch(url);
       const data = await response.json();
-      if (data.status !== '1' || !data.geocodes?.length) {
-        throw new Error('geocode failed');
-      }
+      if (data.status !== '1' || !data.geocodes?.length) throw new Error('geocode failed');
       const loc = data.geocodes[0].location.split(',');
       return { lng: parseFloat(loc[0]), lat: parseFloat(loc[1]), formatted: data.geocodes[0].formatted_address };
     } catch (error) {
@@ -274,9 +254,7 @@ const AmapAPI = {
     try {
       const response = await fetch(url);
       const data = await response.json();
-      if (data.status !== '1') {
-        throw new Error('regeo failed');
-      }
+      if (data.status !== '1') throw new Error('regeo failed');
       return data.regeocode;
     } catch (error) {
       console.error('[AmapAPI] regeo error:', error);
@@ -295,9 +273,7 @@ const AmapAPI = {
     try {
       const response = await fetch(url);
       const data = await response.json();
-      if (data.status !== '1') {
-        throw new Error('poi search failed');
-      }
+      if (data.status !== '1') throw new Error('poi search failed');
       return data.pois || [];
     } catch (error) {
       console.error('[AmapAPI] searchPOI error:', error);
@@ -315,9 +291,7 @@ const AmapAPI = {
     try {
       const response = await fetch(url);
       const data = await response.json();
-      if (data.status !== '1') {
-        throw new Error('around search failed');
-      }
+      if (data.status !== '1') throw new Error('around search failed');
       return data.pois || [];
     } catch (error) {
       console.error('[AmapAPI] searchAround error:', error);
@@ -329,21 +303,15 @@ const AmapAPI = {
 /* ========================================
    Supabase 接口
    ======================================== */
-
 const SupabaseAPI = {
   client: null,
 
-  /**
-   * 初始化 Supabase 客户端
-   * 需要在页面加载时调用
-   */
   init() {
     const { url, anonKey } = API_CONFIG.supabase;
     if (!url || !anonKey) {
       console.warn('[Supabase] URL 或 anonKey 未配置，用户系统不可用');
       return false;
     }
-    // 使用 Supabase JS SDK（需在 HTML 中引入）
     if (typeof supabase !== 'undefined') {
       this.client = supabase.createClient(url, anonKey);
       return true;
@@ -352,81 +320,46 @@ const SupabaseAPI = {
     return false;
   },
 
-  /**
-   * 检查是否已配置
-   */
   isReady() {
     return this.client !== null;
   },
 
-  /**
-   * 获取当前登录用户
-   */
   async getCurrentUser() {
     if (!this.client) return null;
     const { data: { user } } = await this.client.auth.getUser();
     return user;
   },
 
-  /**
-   * 注册（邮箱 + 密码）
-   * @param {string} email - 邮箱
-   * @param {string} password - 密码
-   * @param {string} username - 用户名
-   * @returns {Promise<Object>} 注册结果
-   */
   async signUp(email, password, username) {
     if (!this.client) throw new Error('Supabase not initialized');
     const { data, error } = await this.client.auth.signUp({
-      email: email,
-      password: password,
-      options: {
-        data: { username: username },
-      },
+      email,
+      password,
+      options: { data: { username } },
     });
     if (error) throw error;
     return data;
   },
 
-  /**
-   * 登录（邮箱 + 密码）
-   * @param {string} email - 邮箱
-   * @param {string} password - 密码
-   * @returns {Promise<Object>} 登录结果
-   */
   async signIn(email, password) {
     if (!this.client) throw new Error('Supabase not initialized');
-    const { data, error } = await this.client.auth.signInWithPassword({
-      email: email,
-      password: password,
-    });
+    const { data, error } = await this.client.auth.signInWithPassword({ email, password });
     if (error) throw error;
     return data;
   },
 
-  /**
-   * 退出登录
-   */
   async signOut() {
     if (!this.client) return;
     await this.client.auth.signOut();
   },
 
-  /**
-   * 更新用户资料
-   */
   async updateProfile(updates) {
     if (!this.client) throw new Error('Supabase not initialized');
-    const { data, error } = await this.client.auth.updateUser({
-      data: updates,
-    });
+    const { data, error } = await this.client.auth.updateUser({ data: updates });
     if (error) throw error;
     return data;
   },
 
-  /**
-   * 获取所有智能体（广场展示）
-   */
   async getAgents(category = '', limit = 20, offset = 0) {
     if (!this.client) return [];
     let query = this.client.from('agents').select('*').range(offset, offset + limit - 1).order('uses_count', { ascending: false });
@@ -436,9 +369,6 @@ const SupabaseAPI = {
     return data || [];
   },
 
-  /**
-   * 创建智能体
-   */
   async createAgent(agentData) {
     if (!this.client) throw new Error('Supabase not initialized');
     const { data, error } = await this.client.from('agents').insert(agentData).select().single();
@@ -446,9 +376,6 @@ const SupabaseAPI = {
     return data;
   },
 
-  /**
-   * 获取用户创建的智能体
-   */
   async getMyAgents(userId) {
     if (!this.client) return [];
     const { data, error } = await this.client.from('agents').select('*').eq('creator_id', userId);
@@ -456,9 +383,6 @@ const SupabaseAPI = {
     return data || [];
   },
 
-  /**
-   * 保存对话历史
-   */
   async saveChatHistory(userId, agentId, messages) {
     if (!this.client) return;
     const { error } = await this.client.from('chat_history').upsert({
@@ -470,9 +394,6 @@ const SupabaseAPI = {
     if (error) console.error('[Supabase] saveChatHistory error:', error);
   },
 
-  /**
-   * 获取对话历史
-   */
   async getChatHistory(userId, agentId) {
     if (!this.client) return [];
     const { data, error } = await this.client.from('chat_history')
